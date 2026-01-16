@@ -215,5 +215,3 @@ def skill_search(
         ],
         "related_skills": [{"skill_name": r[0], "count": int(r[1])} for r in related],
     }
-
-## todo Chart mapping
