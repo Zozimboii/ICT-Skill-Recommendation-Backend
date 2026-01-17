@@ -10,3 +10,11 @@ class RecommendResponse(BaseModel):
     title: str
     soft_skills: List[str]
     hard_skills: List[str]
+
+class LoginRequest(BaseModel):
+    username: str
+    password: str
+
+class RegisterRequest(BaseModel):
+    username: str
+    password: str

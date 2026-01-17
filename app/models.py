@@ -44,3 +44,9 @@ class JobCountHistory(Base):
     sub_category_name = Column(String(255))
     job_count = Column(Integer)
     snapshot_date = Column(DateTime)
+
+class User(Base):
+    __tablename__ = "user"
+    id = Column(Integer, primary_key=True, index=True)
+    username = Column(String(50), unique=True, nullable=False)
+    password = Column(String(255), nullable=False)
