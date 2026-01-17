@@ -5,7 +5,8 @@ Migration script to update database schema
 """
 
 from app.database import engine, Base
-from app.models import JobCountBySubCategory, JobCountHistory
+from app.models import JobCountBySubCategory, JobCountHistory ,User
+from sqlalchemy import Column, DateTime, func
 
 # สร้างตาราง
 Base.metadata.create_all(bind=engine)

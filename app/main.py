@@ -1,14 +1,17 @@
 # backend/app/main.py
 
-from fastapi import FastAPI, Depends, Query
+from fastapi import FastAPI, Depends, Query , HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
 from sqlalchemy.orm import Session
 from sqlalchemy import func, distinct, select
 
 from app.database import get_db
-from app.models import JobsSkill, JobCountBySubCategory, JobSkillCountBySkillname, JobSkillsWithCategories
+from app.models import JobsSkill, JobCountBySubCategory, JobSkillCountBySkillname, JobSkillsWithCategories ,User
+from app.schemas import LoginRequest , RegisterRequest
+from app.security import hash_password, verify_password
 
+    
 app = FastAPI(title="ICT Job Skill Recommendation API")
 
 # ✅ CORS (ให้ frontend เรียกได้)
@@ -215,3 +218,52 @@ def skill_search(
         ],
         "related_skills": [{"skill_name": r[0], "count": int(r[1])} for r in related],
     }
+
+@app.post("/login")
+def login(data: LoginRequest, db: Session = Depends(get_db)):
+    # 1. ตรวจสอบว่ามี user นี้หรือไม่
+    user = db.query(User).filter(User.username == data.username).first()
+
+    # 2. ตรวจสอบ password
+    if not user or not verify_password(data.password, user.password):
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid username or password"
+        )
+
+    # 3. login สำเร็จ
+    return {
+        "status": "success",
+        "message": "Login successful",
+        "user": {
+            "id": user.id,
+            "username": user.username
+        }
+    }
+
+
+@app.post("/register")
+def register(data: RegisterRequest, db: Session = Depends(get_db)):
+    existing_user = (
+        db.query(User)
+        .filter(User.username == data.username)
+        .first()
+    )
+
+    if existing_user:
+        raise HTTPException(status_code=400, detail="Username already exists")
+
+    user = User(
+        username=data.username,
+        password=hash_password(data.password)
+    )
+
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+
+    return {
+        "status": "success",
+        "user_id": user.id
+    }
+
