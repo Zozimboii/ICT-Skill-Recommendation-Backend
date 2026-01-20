@@ -90,3 +90,12 @@ def fetch_jobsdb():
         print(f"{title:<65} {count}")
 
     return list(jobs.values())
+
+def summarize_job_title_trend(jobs: list[dict], limit: int = 20):
+    titles = [job["title"] for job in jobs if job.get("title")]
+    counter = Counter(titles)
+
+    return [
+        {"label": title, "count": count}
+        for title, count in counter.most_common(limit)
+    ]

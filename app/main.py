@@ -6,10 +6,15 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from sqlalchemy import func, distinct, select
 
+from app.advisor import DEFAULT_SKILLS, detect_intent, extract_keywords
 from app.database import get_db
 from app.models import JobsSkill, JobCountBySubCategory, JobSkillCountBySkillname, JobSkillsWithCategories ,User
 from app.schemas import LoginRequest , RegisterRequest
 from app.security import hash_password, verify_password
+from app.models import JobsSkill, JobCountBySubCategory, JobSkillCountBySkillname, JobSkillsWithCategories
+from app.schemas_advisor import AdvisorRequest
+from app.jobsdb_scapper import fetch_jobsdb, summarize_job_title_trend
+from datetime import datetime
 
     
 app = FastAPI(title="ICT Job Skill Recommendation API")
@@ -28,7 +33,17 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+@app.get("/trends/jobsdb")
+def jobsdb_trend(limit: int = 20):
+    jobs = fetch_jobsdb()  # ← เรียก scraper
+    items = summarize_job_title_trend(jobs, limit)
 
+    return {
+        "source": "JobsDB",
+        "metric": "job_title_frequency",
+        "as_of": datetime.utcnow().isoformat(),
+        "items": items,
+    }
 @app.get("/health")
 def health():
     return {"status": "ok"}
@@ -267,3 +282,45 @@ def register(data: RegisterRequest, db: Session = Depends(get_db)):
         "user_id": user.id
     }
 
+## todo Chart mapping
+@app.post("/advisor")
+def advisor(payload: AdvisorRequest, db: Session = Depends(get_db)):
+    question = payload.question.strip()
+    intent = detect_intent(question)
+
+    # keywords ที่จับได้จากประโยค (เช่น python sql)
+    detected = extract_keywords(question)
+
+    # skill ที่แนะนำเบื้องต้นตาม intent
+    suggested = DEFAULT_SKILLS.get(intent, DEFAULT_SKILLS["general"])
+
+    # ถ้ามี keyword (เช่น python) ให้ดู trend จาก DB ของคุณด้วย
+    trend_preview = {}
+    if detected:
+        # เอาตัวแรกไปลอง search trend
+        kw = detected[0]
+        # เรียก logic เดิมของ /skills/search โดยตรง (จะเรียก function ก็ได้)
+        # ที่ง่ายสุด: ทำ query เล็ก ๆ สรุปจาก table summary
+        row = (
+            db.query(
+                JobSkillCountBySkillname.skill_name,
+                JobSkillCountBySkillname.skill_type,
+                JobSkillCountBySkillname.job_skill_count,
+            )
+            .filter(func.lower(JobSkillCountBySkillname.skill_name).like(f"%{kw}%"))
+            .order_by(JobSkillCountBySkillname.job_skill_count.desc())
+            .first()
+        )
+        if row:
+            trend_preview = {
+                "skill_name": row[0],
+                "skill_type": row[1],
+                "job_count": int(row[2]),
+            }
+
+    return {
+        "intent": intent,
+        "suggested_skills": suggested,
+        "detected_keywords": detected,
+        "trend_preview": trend_preview,
+    }
