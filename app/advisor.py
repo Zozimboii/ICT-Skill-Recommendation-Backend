@@ -1,0 +1,33 @@
+import re
+
+# คำหลัก → กลุ่มสายงาน
+INTENTS = [
+    ("web", ["เว็บ", "website", "frontend", "backend", "fullstack", "เว็บแอป", "nuxt", "vue", "react"]),
+    ("data", ["data", "analyst", "วิเคราะห์ข้อมูล", "data analyst", "bi", "dashboard", "power bi", "tableau"]),
+    ("security", ["security", "cyber", "ความปลอดภัย", "แฮก", "pentest", "เครือข่าย"]),
+    ("mobile", ["mobile", "แอป", "android", "ios", "flutter", "react native"]),
+    ("ai", ["ai", "machine learning", "ml", "deep learning", "ปัญญาประดิษฐ์"]),
+]
+
+# สายงาน → สกิลเริ่มต้นที่แนะนำ (แก้ได้ตามที่คุณต้องการ)
+DEFAULT_SKILLS = {
+    "web": ["html", "css", "javascript", "vue", "nuxt", "node.js"],
+    "data": ["sql", "excel", "python", "power bi", "tableau"],
+    "security": ["networking", "linux", "python", "web basics"],
+    "mobile": ["dart", "flutter", "kotlin", "swift"],
+    "ai": ["python", "math", "pandas", "machine learning"],
+    "general": ["python", "sql", "excel"],
+}
+
+def detect_intent(question: str) -> str:
+    q = question.lower()
+    for intent, keywords in INTENTS:
+        if any(k.lower() in q for k in keywords):
+            return intent
+    return "general"
+
+def extract_keywords(question: str):
+    # ดึงคำที่เป็นอังกฤษ/เทคง่าย ๆ เช่น python, sql, excel
+    # (คุณเพิ่ม dictionary ได้ทีหลัง)
+    tokens = re.findall(r"[a-zA-Z\.\+#]{2,}", question.lower())
+    return list(dict.fromkeys(tokens))  # unique preserve order
