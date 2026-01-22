@@ -9,11 +9,11 @@ from sqlalchemy import func, distinct, select
 from app.advisor import DEFAULT_SKILLS, detect_intent, extract_keywords
 from app.database import get_db
 from app.models import JobsSkill, JobCountBySubCategory, JobSkillCountBySkillname, JobSkillsWithCategories ,User
-from app.schemas import LoginRequest , RegisterRequest
+from app.schemas import LoginRequest , RegisterRequest , AdvisorRequest, ChatRequest, ChatResponse
 from app.security import hash_password, verify_password
 from app.models import JobsSkill, JobCountBySubCategory, JobSkillCountBySkillname, JobSkillsWithCategories
-from app.schemas_advisor import AdvisorRequest
 from app.jobsdb_scapper import fetch_jobsdb, summarize_job_title_trend
+from app.ai_service import get_ai_response
 from datetime import datetime
 
     
@@ -324,3 +324,116 @@ def advisor(payload: AdvisorRequest, db: Session = Depends(get_db)):
         "detected_keywords": detected,
         "trend_preview": trend_preview,
     }
+
+@app.post("/chat", response_model=ChatResponse)
+def chat_with_ai(payload: ChatRequest, db: Session = Depends(get_db)):
+    """
+    AI Chatbot สำหรับถามตอบเกี่ยวกับทักษะและอาชีพ ICT
+    ใช้ข้อมูลจาก database เป็นหลัก แล้วใช้ AI ช่วยสรุป
+    """
+    question = payload.question.strip()
+    
+    if not question:
+        raise HTTPException(status_code=400, detail="คำถามไม่สามารถว่างได้")
+    
+    db_data = None
+    
+    # ดึงข้อมูลจาก database ก่อน (เป็นหลัก)
+    if payload.include_context:
+        # หา keywords จากคำถาม
+        detected = extract_keywords(question)
+        
+        # หาข้อมูล skill จาก database
+        if detected:
+            kw = detected[0]
+            
+            # หา skill ที่ match
+            skill_row = (
+                db.query(
+                    JobSkillCountBySkillname.skill_name,
+                    JobSkillCountBySkillname.skill_type,
+                    JobSkillCountBySkillname.job_skill_count,
+                )
+                .filter(func.lower(JobSkillCountBySkillname.skill_name).like(f"%{kw}%"))
+                .order_by(JobSkillCountBySkillname.job_skill_count.desc())
+                .first()
+            )
+            
+            if skill_row:
+                skill_name, skill_type, job_count = skill_row
+                
+                # หา job_id ที่มี skill นี้
+                job_ids_subq = (
+                    db.query(JobsSkill.job_id)
+                    .filter(func.lower(JobsSkill.skill_name) == func.lower(skill_name))
+                    .subquery()
+                )
+                job_ids_select = select(job_ids_subq.c.job_id)
+                
+                # Top sub-categories
+                top_subcategories = (
+                    db.query(
+                        JobSkillsWithCategories.main_category_id,
+                        JobSkillsWithCategories.main_category_name,
+                        JobSkillsWithCategories.sub_category_id,
+                        JobSkillsWithCategories.sub_category_name,
+                        func.count(distinct(JobSkillsWithCategories.job_id)).label("count"),
+                    )
+                    .filter(JobSkillsWithCategories.job_id.in_(job_ids_select))
+                    .group_by(
+                        JobSkillsWithCategories.main_category_id,
+                        JobSkillsWithCategories.main_category_name,
+                        JobSkillsWithCategories.sub_category_id,
+                        JobSkillsWithCategories.sub_category_name,
+                    )
+                    .order_by(func.count(distinct(JobSkillsWithCategories.job_id)).desc())
+                    .limit(10)
+                    .all()
+                )
+                
+                # Related skills
+                related_skills = (
+                    db.query(
+                        JobsSkill.skill_name,
+                        func.count(distinct(JobsSkill.job_id)).label("count"),
+                    )
+                    .filter(JobsSkill.job_id.in_(job_ids_select))
+                    .filter(func.lower(JobsSkill.skill_name) != func.lower(skill_name))
+                    .group_by(JobsSkill.skill_name)
+                    .order_by(func.count(distinct(JobsSkill.job_id)).desc())
+                    .limit(20)
+                    .all()
+                )
+                
+                # สร้าง db_data object
+                db_data = {
+                    "skill_name": skill_name,
+                    "skill_type": skill_type,
+                    "job_count": int(job_count),
+                    "top_subcategories": [
+                        {
+                            "main_category_id": r[0],
+                            "main_category_name": r[1],
+                            "sub_category_id": r[2],
+                            "sub_category_name": r[3],
+                            "count": int(r[4]),
+                        }
+                        for r in top_subcategories
+                    ],
+                    "related_skills": [
+                        {"skill_name": r[0], "count": int(r[1])} 
+                        for r in related_skills
+                    ],
+                }
+    
+    # เรียก AI service (จะใช้ข้อมูลจาก database เป็นหลัก)
+    import os
+    provider = os.getenv("AI_PROVIDER", "openai").lower()
+    use_ai = bool(os.getenv("GEMINI_API_KEY")) if provider == "gemini" else bool(os.getenv("OPENAI_API_KEY"))
+    answer = get_ai_response(question, db_data, use_ai=use_ai)
+    
+    return ChatResponse(
+        answer=answer,
+        question=question,
+        has_ai=use_ai
+    )
