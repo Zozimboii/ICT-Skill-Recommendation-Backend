@@ -2,10 +2,8 @@
 
 from fastapi import FastAPI, Depends, Query , HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-
 from sqlalchemy.orm import Session
 from sqlalchemy import func, distinct, select
-
 from app.advisor import DEFAULT_SKILLS, detect_intent, extract_keywords
 from app.database import get_db
 from app.models import JobsSkill, JobCountBySubCategory, JobSkillCountBySkillname, JobSkillsWithCategories ,User
@@ -19,7 +17,6 @@ from datetime import datetime
     
 app = FastAPI(title="ICT Job Skill Recommendation API")
 
-# ✅ CORS (ให้ frontend เรียกได้)
 origins = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
@@ -299,8 +296,7 @@ def advisor(payload: AdvisorRequest, db: Session = Depends(get_db)):
     if detected:
         # เอาตัวแรกไปลอง search trend
         kw = detected[0]
-        # เรียก logic เดิมของ /skills/search โดยตรง (จะเรียก function ก็ได้)
-        # ที่ง่ายสุด: ทำ query เล็ก ๆ สรุปจาก table summary
+
         row = (
             db.query(
                 JobSkillCountBySkillname.skill_name,
@@ -426,11 +422,11 @@ def chat_with_ai(payload: ChatRequest, db: Session = Depends(get_db)):
                     ],
                 }
     
-    # เรียก AI service (จะใช้ข้อมูลจาก database เป็นหลัก)
+    # เรียก AI service ใช้ข้อมูลจาก database เป็นหลัก
     import os
     provider = os.getenv("AI_PROVIDER", "openai").lower()
     use_ai = bool(os.getenv("GEMINI_API_KEY")) if provider == "gemini" else bool(os.getenv("OPENAI_API_KEY"))
-    answer = get_ai_response(question, db_data, use_ai=use_ai)
+    answer = get_ai_response(question, db_data)
     
     return ChatResponse(
         answer=answer,
