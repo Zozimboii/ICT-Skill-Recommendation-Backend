@@ -9,14 +9,31 @@ INTENTS = [
     ("ai", ["ai", "machine learning", "ml", "deep learning", "ปัญญาประดิษฐ์"]),
 ]
 
-# สายงาน → สกิลเริ่มต้นที่แนะนำ (แก้ได้ตามที่คุณต้องการ)
 DEFAULT_SKILLS = {
-    "web": ["html", "css", "javascript", "vue", "nuxt", "node.js"],
-    "data": ["sql", "excel", "python", "power bi", "tableau"],
-    "security": ["networking", "linux", "python", "web basics"],
-    "mobile": ["dart", "flutter", "kotlin", "swift"],
-    "ai": ["python", "math", "pandas", "machine learning"],
-    "general": ["python", "sql", "excel"],
+    "web": [
+        "html", "css", "javascript", "vue", "nuxt", "node.js",
+        "react", "typescript", "rest api", "git", "docker",
+    ],
+    "data": [
+        "sql", "excel", "python", "power bi", "tableau",
+        "pandas", "statistics", "data visualization", "etl", "data cleaning",
+    ],
+    "security": [
+        "networking", "linux", "python", "web basics",
+        "owasp top 10", "burp suite", "siem", "cryptography", "incident response",
+    ],
+    "mobile": [
+        "dart", "flutter", "kotlin", "swift",
+        "firebase", "rest api", "state management", "ui/ux", "android studio",
+    ],
+    "ai": [
+        "python", "math", "pandas", "machine learning",
+        "numpy", "scikit-learn", "deep learning", "pytorch", "model evaluation",
+    ],
+    "general": [
+        "python", "sql", "excel",
+        "git", "linux basics", "problem solving", "communication", "cloud basics",
+    ],
 }
 
 def detect_intent(question: str) -> str:
@@ -27,7 +44,5 @@ def detect_intent(question: str) -> str:
     return "general"
 
 def extract_keywords(question: str):
-    # ดึงคำที่เป็นอังกฤษ/เทคง่าย ๆ เช่น python, sql, excel
-    # (คุณเพิ่ม dictionary ได้ทีหลัง)
     tokens = re.findall(r"[a-zA-Z\.\+#]{2,}", question.lower())
     return list(dict.fromkeys(tokens))  # unique preserve order
