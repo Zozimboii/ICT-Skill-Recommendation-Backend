@@ -1,9 +1,10 @@
-from app.jobsdb_scapper import fetch_jobsdb
+#jobsdb_update.py
+from app.scrapers.jobsdb_scapper import fetch_jobsdb
 # from app.jobthai_scapper import fetch_jobthai
 # from app.jobthaiweb_scapper import fetch_jobthaiweb
-from app.category_mapping import map_category
-from app.database import SessionLocal
-from app.models import JobCountBySubCategory
+from app.utils.category_mapping import map_category
+from app.db.database import SessionLocal
+from app.db.models import JobCountBySubCategory, JobCountHistory
 from collections import defaultdict
 from datetime import datetime
 
@@ -58,7 +59,7 @@ for sub_id, count in category_count.items():
 
 
 # บันทึก snapshot ลง job_count_history
-from app.models import JobCountHistory
+from backend.app.db.models import JobCountHistory
 from datetime import datetime
 
 snapshot_date = datetime.now().date()
