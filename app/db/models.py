@@ -47,6 +47,8 @@ class JobCountHistory(Base):
 
 class User(Base):
     __tablename__ = "user"
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column("ID", Integer, primary_key=True, autoincrement=True)
     username = Column(String(50), unique=True, nullable=False)
-    password = Column(String(255), nullable=False)
+    email = Column(String(255), unique=True, nullable=False)
+    password = Column(String(512), nullable=False)
+    create_time = Column(DateTime, server_default=func.now(), nullable=False)
