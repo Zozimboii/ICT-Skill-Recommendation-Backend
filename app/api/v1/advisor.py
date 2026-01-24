@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
-from app.db.database import get_db
+from app.db.session import get_db
 from app.schemas.advisor import AdvisorRequest, AdvisorResponse
 from app.services.advisor_service import ask_advisor
 from app.utils.advisor_rules import DEFAULT_SKILLS, detect_intent, extract_keywords
