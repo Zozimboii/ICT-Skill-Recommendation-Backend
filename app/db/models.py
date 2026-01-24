@@ -1,6 +1,6 @@
 from sqlalchemy import Column, Integer, String, DateTime, Float, func
 from datetime import datetime
-from .database import Base
+from .session import Base
 
 class JobsSkill(Base):
     __tablename__ = "jobs_skill"

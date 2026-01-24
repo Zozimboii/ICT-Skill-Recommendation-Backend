@@ -4,7 +4,7 @@ Migration script to update database schema
 - สร้างตาราง job_count_history
 """
 
-from app.db.database import engine, Base
+from app.db.session import engine, Base
 from app.db.models import JobCountBySubCategory, JobCountHistory ,User
 from sqlalchemy import Column, DateTime, func
 

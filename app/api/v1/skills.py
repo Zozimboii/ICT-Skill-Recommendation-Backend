@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
-from app.db.database import get_db
+from app.db.session import get_db
 from app.services.skills_service import search_skill
 from app.schemas.skills import SkillSearchResponse
 

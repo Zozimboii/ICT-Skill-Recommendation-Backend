@@ -1,6 +1,6 @@
 # backend/app/services/trends_service.py
 from datetime import datetime
-from app.scrapers.jobsdb_scapper import fetch_jobsdb, summarize_job_title_trend
+from app.scrapers.jobsdb_scapper import fetch_jobsdb
 
 def jobsdb_trend(limit: int = 20):
     jobs = fetch_jobsdb()
