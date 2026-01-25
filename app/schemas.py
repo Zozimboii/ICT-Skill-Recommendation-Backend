@@ -29,13 +29,13 @@ class AdvisorResponse(BaseModel):
     intent: str
     suggested_skills: List[str]
     detected_keywords: List[str]
-    trend_preview: Dict[str, Any]  # เอาผล /skills/search มาใส่สั้น ๆ
+    trend_preview: Dict[str, Any] 
 
 class ChatRequest(BaseModel):
     question: str
-    include_context: bool = True  # ต้องการให้ AI ใช้ข้อมูลจาก database หรือไม่
+    include_context: bool = True  
 
 class ChatResponse(BaseModel):
     answer: str
     question: str
-    has_ai: bool  # ใช้ AI จริงหรือ fallback
+    has_ai: bool  
