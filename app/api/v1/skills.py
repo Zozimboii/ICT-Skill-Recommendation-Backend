@@ -1,11 +1,12 @@
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
-from app.db.session import get_db
-from app.services.skills_service import search_skill
+from app.db.database import get_db
 from app.schemas.skills import SkillSearchResponse
+from app.services.skills_service import search_skill
 
 router = APIRouter()
+
 
 @router.get("/search", response_model=SkillSearchResponse)
 def skill_search(
@@ -14,4 +15,3 @@ def skill_search(
     db: Session = Depends(get_db),
 ):
     return search_skill(db, keyword=q, limit=limit)
-

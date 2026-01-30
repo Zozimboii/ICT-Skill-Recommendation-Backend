@@ -2,15 +2,17 @@
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
-from app.db.session import get_db
+from app.db.database import get_db
 from app.services.jobs_service import list_jobs, search_jobs
 
 router = APIRouter()
+
 
 @router.get("")
 def get_jobs(db: Session = Depends(get_db)):
     # GET /api/v1/jobs
     return list_jobs(db)
+
 
 @router.get("/searchjobs")
 def get_searchjobs(

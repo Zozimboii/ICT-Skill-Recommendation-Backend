@@ -1,6 +1,7 @@
 from pydantic import BaseModel
 from typing import List
 
+
 class RecommendResponse(BaseModel):
     job_id: int
     title: str

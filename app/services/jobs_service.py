@@ -4,6 +4,7 @@ from sqlalchemy import func
 
 from app.db.models import JobsSkill, JobCountBySubCategory
 
+
 def list_jobs(db: Session):
     rows = (
         db.query(JobsSkill.job_id, JobsSkill.title)
@@ -12,6 +13,7 @@ def list_jobs(db: Session):
         .all()
     )
     return [{"job_id": r[0], "title": r[1]} for r in rows]
+
 
 def search_jobs(db: Session, q: str, limit: int = 20):
     keyword = q.strip().lower()
@@ -22,7 +24,9 @@ def search_jobs(db: Session, q: str, limit: int = 20):
             JobCountBySubCategory.sub_category_name,
             JobCountBySubCategory.job_count,
         )
-        .filter(func.lower(JobCountBySubCategory.sub_category_name).like(f"%{keyword}%"))
+        .filter(
+            func.lower(JobCountBySubCategory.sub_category_name).like(f"%{keyword}%")
+        )
         .order_by(JobCountBySubCategory.job_count.desc())
         .limit(limit)
         .all()
@@ -82,7 +86,11 @@ def search_jobs(db: Session, q: str, limit: int = 20):
             for r in top_categories
         ],
         "related_sub_categories": [
-            {"sub_category_id": int(r[0]), "sub_category_name": r[1], "job_count": int(r[2])}
+            {
+                "sub_category_id": int(r[0]),
+                "sub_category_name": r[1],
+                "job_count": int(r[2]),
+            }
             for r in related
         ],
     }

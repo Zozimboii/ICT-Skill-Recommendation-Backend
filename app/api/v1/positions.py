@@ -1,17 +1,17 @@
 # app/api/v1/positions.py
 from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy import distinct, func, select
 from sqlalchemy.orm import Session
-from sqlalchemy import func, distinct, select
 
-from app.db.session import get_db
+from app.db.database import get_db
 from app.db.models import JobCountBySubCategory, JobSkillsWithCategories, JobsSkill
 from app.schemas.positions import (
-    PositionItem,
-    PositionSkillsResponse,
-    PositionSkill,
-    UserSkillScore,
-    MatchResponse,
     GapItem,
+    MatchResponse,
+    PositionItem,
+    PositionSkill,
+    PositionSkillsResponse,
+    UserSkillScore,
 )
 
 router = APIRouter()
@@ -65,11 +65,7 @@ def _get_position_skills(db: Session, position_id: int, limit: int = 30):
             JobsSkill.skill_name.label("skill_name"),
             func.count(distinct(JobsSkill.job_id)).label("count"),
         )
-        .filter(
-             JobsSkill.job_id.in_(
-              select(job_ids_subq.c.job_id)
-            )
-            )
+        .filter(JobsSkill.job_id.in_(select(job_ids_subq.c.job_id)))
         .group_by(JobsSkill.skill_name)
         .order_by(func.count(distinct(JobsSkill.job_id)).desc())
         .limit(limit)

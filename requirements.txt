@@ -24,3 +24,12 @@ tzdata==2025.3
 uvicorn==0.40.0
 openai==1.12.0
 google-generativeai==0.8.5
+cryptography
+pydantic[email]
+email-validator
+playwright
+passlib
+PyJWT
+prisma
+argon2-cffi
+passlib[argon2]
