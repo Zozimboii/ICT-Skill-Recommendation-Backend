@@ -1,9 +1,10 @@
-from sqlalchemy.orm import Session
 from sqlalchemy import func
+from sqlalchemy.orm import Session
 
 from app.db.models import JobSkillCountBySkillname
 from app.schemas.advisor import AdvisorRequest
 from app.utils.advisor_rules import DEFAULT_SKILLS, detect_intent, extract_keywords
+
 
 def ask_advisor(db: Session, payload: AdvisorRequest):
     question = payload.question.strip()

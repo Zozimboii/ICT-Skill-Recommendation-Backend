@@ -1,0 +1,91 @@
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-py"
+  recursive_type_depth = 5
+}
+
+// --- ตาราง User ---
+model User {
+  id         Int       @id @default(autoincrement()) @map("ID")
+  username   String    @unique @db.VarChar(16)
+  email      String    @unique @db.VarChar(255)
+  password   String    @db.VarChar(512)
+  createTime DateTime  @map("create_time") @db.DateTime
+
+  @@map("user")
+}
+
+// --- ตาราง Job Count History ---
+model JobCountHistory {
+  id               Int       @id @default(autoincrement())
+  mainCategoryId   Int?      @map("main_category_id")
+  mainCategoryName String?   @map("main_category_name") @db.Text
+  subCategoryId    Int?      @map("sub_category_id")
+  subCategoryName  String?   @map("sub_category_name") @db.VarChar(255)
+  jobCount         Int?      @map("job_count")
+  snapshotDate     DateTime? @map("snapshot_date") @db.DateTime
+
+  @@map("job_count_history")
+}
+
+// --- ตาราง Job Skill Trend ---
+model JobSkillTrend {
+  id            Int       @id @default(autoincrement())
+  snapshotDate  DateTime? @map("snapshot_date") @db.Date
+  skillName     String?   @map("skill_name") @db.VarChar(255)
+  subCategoryId Int?      @map("sub_category_id")
+  count         Int?
+
+  @@map("job_skill_trend")
+}
+
+// --- ตาราง Jobs Skill ---
+model JobsSkill {
+  id        Int     @id @default(autoincrement()) // เพิ่ม ID เพื่อให้ Prisma จัดการง่ายขึ้น
+  jobId     Int?    @map("job_id")
+  title     String? @db.Text
+  skillName String? @map("skill_name") @db.Text
+  skillType String? @map("skill_type") @db.Text
+
+  @@map("jobs_skill")
+}
+
+// --- ตาราง Job Skills With Categories ---
+model JobSkillsWithCategories {
+  id               Int     @id @default(autoincrement())
+  jobId            Int?    @map("job_id")
+  title            String? @db.Text
+  type             String? @db.Text
+  mainCategoryId   Int?    @map("main_category_id")
+  mainCategoryName String? @map("main_category_name") @db.Text
+  subCategoryId    Int?    @map("sub_category_id")
+  subCategoryName  String? @map("sub_category_name") @db.Text
+
+  @@map("job_skills_with_categories")
+}
+
+// --- ตาราง Job Count By Sub Category ---
+model JobCountBySubCategory {
+  id               Int     @id @default(autoincrement())
+  mainCategoryId   Int?    @map("main_category_id")
+  mainCategoryName String? @map("main_category_name") @db.Text
+  subCategoryId    Int?    @map("sub_category_id")
+  subCategoryName  String? @map("sub_category_name") @db.Text
+  jobCount         Int?    @map("job_count")
+
+  @@map("job_count_by_sub_category")
+}
+
+// --- ตาราง Job Skill Count By Skillname ---
+model JobSkillCountBySkillname {
+  id            Int     @id @default(autoincrement())
+  skillName     String? @map("skill_name") @db.Text
+  skillType     String? @map("skill_type") @db.Text
+  jobSkillCount Int?    @map("job_skill_count")
+
+  @@map("job_skill_count_by_skillname")
+}

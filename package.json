@@ -1,0 +1,7 @@
+{
+  "scripts": {
+    "format": "ruff format .",
+    "lint": "ruff check --fix .",
+    "check": "ruff check ."
+  }
+}

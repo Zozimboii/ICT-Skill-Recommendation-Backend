@@ -1,7 +1,7 @@
 # app/api/v1/api.py
 from fastapi import APIRouter
 
-from app.api.v1 import skills, jobs, advisor, trends, auth , chat , positions
+from app.api.v1 import advisor, auth, chat, jobs, positions, skills, trends
 
 router = APIRouter(prefix="/api/v1")
 

@@ -1,12 +1,14 @@
 import os
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
+from app.db.database import get_db
 from app.schemas.chat import ChatRequest, ChatResponse
 from app.services.ai_service import get_ai_response
-from app.db.session import get_db
 
 router = APIRouter(prefix="/chat", tags=["chat"])
+
 
 @router.post("", response_model=ChatResponse)
 def chat_with_ai(payload: ChatRequest, db: Session = Depends(get_db)):
@@ -18,7 +20,11 @@ def chat_with_ai(payload: ChatRequest, db: Session = Depends(get_db)):
     db_data = None
 
     provider = os.getenv("AI_PROVIDER", "openai").lower()
-    use_ai = bool(os.getenv("GEMINI_API_KEY")) if provider == "gemini" else bool(os.getenv("OPENAI_API_KEY"))
+    use_ai = (
+        bool(os.getenv("GEMINI_API_KEY"))
+        if provider == "gemini"
+        else bool(os.getenv("OPENAI_API_KEY"))
+    )
 
     answer = get_ai_response(question, db_data, use_ai=use_ai)
 

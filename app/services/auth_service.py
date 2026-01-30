@@ -1,8 +1,8 @@
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
-from app.db.models import User
 from app.core.security import hash_password, verify_password
+from app.db.models import User
 from app.schemas.auth import LoginRequest, RegisterRequest
 
 # def login_user(db: Session, data: LoginRequest):
@@ -38,6 +38,7 @@ from app.schemas.auth import LoginRequest, RegisterRequest
 #         "user_id": user.id,
 #     }
 
+
 def register_user(db: Session, data: RegisterRequest):
     # กัน username ซ้ำ
     if db.query(User).filter(User.username == data.username).first():
@@ -58,6 +59,7 @@ def register_user(db: Session, data: RegisterRequest):
 
     return {"status": "success", "user_id": user.id}
 
+
 # def login_user(db: Session, data: LoginRequest):
 #     user = db.query(User).filter(User.username == data.username).first()
 
@@ -71,6 +73,7 @@ def register_user(db: Session, data: RegisterRequest):
 #     }
 
 from app.core.jwt import create_access_token
+
 
 def login_user(db: Session, data: LoginRequest):
     user = db.query(User).filter(User.username == data.username).first()

@@ -1,7 +1,42 @@
-.env
-.venv
-env/
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Virtual Environment
+.venv/
 venv/
 ENV/
+env/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Ruff cache
+.ruff_cache/
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+.venv
 env.bak/
 venv.bak/
+
+# ถ้าใช้ Prisma กับ Python
+prisma/migrations/
+
+# Logs
+*.log
+logs/
+
+# Distribution / packaging
+dist/
+build/
+*.egg-info/

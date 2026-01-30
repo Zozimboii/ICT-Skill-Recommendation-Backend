@@ -7,7 +7,8 @@ from app.db.models import (
     JobSkillsWithCategories,
 )
 
-def search_skill(db: Session, keyword: str ,limit: int = 20):
+
+def search_skill(db: Session, keyword: str, limit: int = 20):
     keyword = keyword.strip().lower()
 
     matches = (

@@ -5,17 +5,14 @@ from typing import List, Dict, Tuple
 
 from app.db.models import JobCountBySubCategory, JobSkillsWithCategories, JobsSkill
 
+
 def list_positions(db: Session, limit: int = 200, main_category_id: str | None = None):
     q = db.query(JobCountBySubCategory)
 
     if main_category_id:
         q = q.filter(JobCountBySubCategory.main_category_id == main_category_id)
 
-    rows = (
-        q.order_by(JobCountBySubCategory.job_count.desc())
-         .limit(limit)
-         .all()
-    )
+    rows = q.order_by(JobCountBySubCategory.job_count.desc()).limit(limit).all()
 
     return [
         {
@@ -28,23 +25,28 @@ def list_positions(db: Session, limit: int = 200, main_category_id: str | None =
         for r in rows
     ]
 
+
 def _get_position_row(db: Session, position_id: str):
     return (
         db.query(JobCountBySubCategory)
-          .filter(JobCountBySubCategory.sub_category_id == position_id)
-          .first()
+        .filter(JobCountBySubCategory.sub_category_id == position_id)
+        .first()
     )
+
 
 def _job_ids_for_position_subcat(db: Session, position_id: str):
     # job_id ทั้งหมดที่อยู่ใน sub_category นี้
     # ใช้ distinct กันซ้ำ
     return (
         db.query(distinct(JobSkillsWithCategories.job_id).label("job_id"))
-          .filter(JobSkillsWithCategories.sub_category_id == position_id)
-          .subquery()
+        .filter(JobSkillsWithCategories.sub_category_id == position_id)
+        .subquery()
     )
 
-def get_position_skills(db: Session, position_id: str, top_n: int = 25) -> Tuple[dict, List[dict]]:
+
+def get_position_skills(
+    db: Session, position_id: str, top_n: int = 25
+) -> Tuple[dict, List[dict]]:
     pos = _get_position_row(db, position_id)
     if not pos:
         return {}, []
@@ -79,6 +81,7 @@ def get_position_skills(db: Session, position_id: str, top_n: int = 25) -> Tuple
     }
     return pos_info, skills
 
+
 # ---------- Match % + Gap ----------
 def compute_match_and_gap(
     position_skills: List[dict],
@@ -93,12 +96,15 @@ def compute_match_and_gap(
         score = int(s.get("score", 0))
         user_map[name.lower()] = max(0, min(score, 5)) * 20
 
-    job_map: Dict[str, int] = { (x["skill_name"] or "").strip().lower(): int(x["weight"]) for x in position_skills }
+    job_map: Dict[str, int] = {
+        (x["skill_name"] or "").strip().lower(): int(x["weight"])
+        for x in position_skills
+    }
 
     labels = sorted(set(list(user_map.keys()) + list(job_map.keys())))
 
     user_data = [user_map.get(k, 0) for k in labels]
-    job_data  = [job_map.get(k, 0) for k in labels]
+    job_data = [job_map.get(k, 0) for k in labels]
 
     # match percent = เฉลี่ย(min(user, job)/job) เฉพาะที่ job>0
     ratios = []
@@ -129,5 +135,3 @@ def compute_match_and_gap(
         "match_percent": int(match_percent),
         "gaps": gaps,
     }
-
-

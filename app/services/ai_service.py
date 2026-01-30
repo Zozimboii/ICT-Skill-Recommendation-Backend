@@ -1,5 +1,6 @@
 import os
-from typing import Optional, Dict
+from typing import Dict, Optional
+
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -45,6 +46,7 @@ def format_database_answer(db_data: Dict) -> str:
 
 def _summarize_with_openai(question: str, db_answer: str) -> str:
     from openai import OpenAI
+
     client = OpenAI(api_key=OPENAI_API_KEY)
 
     system_prompt = (
@@ -74,6 +76,7 @@ def _summarize_with_openai(question: str, db_answer: str) -> str:
 
 def _summarize_with_gemini(question: str, db_answer: str) -> str:
     import google.generativeai as genai
+
     genai.configure(api_key=GEMINI_API_KEY)
 
     prompt = f"""คุณเป็นผู้ช่วยด้านทักษะและอาชีพในสาย ICT
@@ -94,11 +97,15 @@ def get_fallback_response(question: str) -> str:
     if any(x in q for x in ["python", "ไพธอน"]):
         return "Python นิยมมากใน ICT ใช้ได้ทั้ง Data, Web, AI แนะนำเริ่มจากพื้นฐาน syntax แล้วทำโปรเจกต์เล็ก ๆ ครับ"
     if any(x in q for x in ["data", "ข้อมูล", "analyst"]):
-        return "สาย Data Analyst แนะนำ SQL + Excel/Power BI และ Python สำหรับวิเคราะห์ข้อมูลครับ"
+        return (
+            "สาย Data Analyst แนะนำ SQL + Excel/Power BI และ Python สำหรับวิเคราะห์ข้อมูลครับ"
+        )
     return "ยังไม่ได้ตั้งค่า AI key ตอนนี้เลยตอบแบบพื้นฐานได้ ลองถามให้เจาะจงสกิล/สายงานมากขึ้นได้นะครับ"
 
 
-def get_ai_response(question: str, db_data: Optional[Dict] = None, use_ai: bool = True) -> str:
+def get_ai_response(
+    question: str, db_data: Optional[Dict] = None, use_ai: bool = True
+) -> str:
     # 1) ถ้ามี db_data ให้ตอบจาก db ก่อน
     if db_data and db_data.get("skill_name"):
         db_answer = format_database_answer(db_data)
