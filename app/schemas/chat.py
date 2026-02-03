@@ -1,3 +1,5 @@
+from typing import List, Optional
+
 from pydantic import BaseModel
 
 
@@ -10,3 +12,4 @@ class ChatResponse(BaseModel):
     answer: str
     question: str
     has_ai: bool
+    tags: Optional[List[str]] = []

@@ -1,3 +1,4 @@
+#app/api/v1/chat.py
 import os
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -6,6 +7,7 @@ from sqlalchemy.orm import Session
 from app.db.database import get_db
 from app.schemas.chat import ChatRequest, ChatResponse
 from app.services.ai_service import get_ai_response
+from app.utils.chat_utils import extract_subcategories_from_answer
 
 router = APIRouter(prefix="/chat", tags=["chat"])
 
@@ -28,4 +30,13 @@ def chat_with_ai(payload: ChatRequest, db: Session = Depends(get_db)):
 
     answer = get_ai_response(question, db_data, use_ai=use_ai)
 
-    return ChatResponse(answer=answer, question=question, has_ai=use_ai)
+    subcategories = extract_subcategories_from_answer(answer, db)
+
+    return ChatResponse(
+        answer=answer,
+        question=question,
+        has_ai=use_ai,
+        subcats=subcategories
+    )
+
+
