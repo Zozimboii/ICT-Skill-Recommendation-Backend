@@ -1,8 +1,8 @@
 # backend/app/services/jobs_service.py
-from sqlalchemy.orm import Session
 from sqlalchemy import func
+from sqlalchemy.orm import Session
 
-from app.db.models import JobsSkill, JobCountBySubCategory
+from app.db.models import JobCountBySubCategory, JobsSkill
 
 
 def list_jobs(db: Session):
