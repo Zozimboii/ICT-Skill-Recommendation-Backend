@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import Column, Date, DateTime, Float, Integer, String, func
+from sqlalchemy import Column, Date, DateTime, Float, Integer, String, Text, func
 
 from .database import Base
 
@@ -70,3 +70,11 @@ class JobSkillTrend(Base):
     skill_name = Column(String(255))
     sub_category_id = Column(Integer)
     count = Column(Integer)
+
+class Jobs_Data(Base):
+    __tablename__ = "job_data"
+    id = Column(Integer, primary_key=True, index=True)
+    title = Column(String(255))
+    link = Column(String(255))
+    posted_at_text = Column(String(255))
+    description = Column(Text, nullable=True)  # เพิ่ม description field

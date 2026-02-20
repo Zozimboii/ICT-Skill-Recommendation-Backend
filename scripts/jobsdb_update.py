@@ -5,10 +5,11 @@ from sqlalchemy import func
 from app.scrapers.jobsdb_scapper import fetch_jobsdb
 from app.utils.category_mapping import map_category
 from app.db.database import SessionLocal
-from app.db.models import JobCountBySubCategory, JobCountHistory, JobSkillTrend
+from app.db.models import JobCountBySubCategory, JobCountHistory, JobSkillTrend, Jobs_Data
 
-MAX_PAGES = 100
-MAX_JOBS = 5000
+MAX_PAGES = 5
+MAX_JOBS = 100
+FETCH_JOB_DETAILS = False  # ตั้งเป็น True เพื่อดึง detailed description (จะช้า)
 
 
 def parse_posted_date(text):
@@ -39,19 +40,55 @@ def main():
         category_info = {}
 
         print("🚀 Starting scraper...")
-        all_jobs = fetch_jobsdb(max_pages=MAX_PAGES, max_jobs=MAX_JOBS)
-        print(f"📦 Processing {len(all_jobs)} jobs for historical distribution...")
+        all_jobs = fetch_jobsdb(max_pages=MAX_PAGES, max_jobs=MAX_JOBS, fetch_details=FETCH_JOB_DETAILS)
+        print(f"\n✅ Scraper got {len(all_jobs)} jobs")
+        
+        if len(all_jobs) == 0:
+            print("❌ ERROR: Scraper returned 0 jobs!")
+            return
 
+        # 0. บันทึกข้อมูลงานทั้งหมดลง job_data table
+        print(f"\n💾 Saving raw job data to job_data table...")
+        db.query(Jobs_Data).delete()  # ลบข้อมูลเก่า
+        
         for job in all_jobs:
-            cat = map_category(job.get("title", ""))
+            job_data = Jobs_Data(
+                title=job.get("title", ""),
+                link=job.get("link", ""),
+                posted_at_text=job.get("posted_at_text", ""),
+                description=job.get("description", "")
+            )
+            db.add(job_data)
+        
+        db.commit()
+        print(f"   ✅ Saved {len(all_jobs)} jobs to job_data table")
+
+        print(f"\n📦 Processing {len(all_jobs)} jobs for categorization...")
+
+        # Show first 3 jobs
+        print("\n📋 First 3 jobs from scraper:")
+        for i, job in enumerate(all_jobs[:3], 1):
+            print(f"   {i}. Title: {job.get('title', 'N/A')[:60]}")
+            print(f"      Posted: {job.get('posted_at_text', 'N/A')}")
+
+        successful_categorized = 0
+        failed_categorized = []
+        
+        for job in all_jobs:
+            title = job.get("title", "")
+            posted_text = job.get("posted_at_text", "")
+            
+            cat = map_category(title)
             if not cat:
+                failed_categorized.append(title)
                 continue
 
+            successful_categorized += 1
             sub_id = cat["sub_category_id"]
             category_info[sub_id] = cat
 
             # ✅ คำนวณวันจริงที่ลงประกาศ
-            actual_date = parse_posted_date(job.get("posted_at_text", ""))
+            actual_date = parse_posted_date(posted_text)
 
             # เก็บยอดลงในวันที่นั้นๆ (ย้อนหลัง)
             daily_history[actual_date][sub_id] += 1
@@ -60,7 +97,20 @@ def main():
             for skill in cat.get("skills", []):
                 daily_skills[actual_date][(skill, sub_id)] += 1
 
-        print(f"💾 Updating database for {len(daily_history)} unique dates...")
+        print(f"\n✅ Successfully categorized: {successful_categorized}")
+        print(f"❌ Failed to categorize: {len(failed_categorized)}")
+        
+        if failed_categorized:
+            print(f"\n❓ Sample uncategorized titles:")
+            for title in failed_categorized[:5]:
+                print(f"   - {title}")
+
+        if successful_categorized == 0:
+            print("\n⚠️ WARNING: No jobs were categorized! Cannot save to database.")
+            return
+
+        print(f"\n💾 Updating database for {len(daily_history)} unique dates...")
+        print(f"   Categories found: {len(category_info)}")
 
         # 1. จัดการตาราง History และ Skill Trend ย้อนหลัง
         for target_date in daily_history.keys():
@@ -96,6 +146,7 @@ def main():
                 )
 
         db.commit()
+        print(f"   ✅ JobCountHistory and JobSkillTrend saved")
 
         # 2. อัปเดตตาราง JobCountBySubCategory (ยอดล่าสุด ณ ปัจจุบัน)
         # วิธีการคือรวมยอดจากทุกวันที่ดึงมาได้ใหม่
@@ -113,8 +164,9 @@ def main():
             )
 
         db.commit()
+        print(f"   ✅ JobCountBySubCategory updated")
         print(
-            f"✅ Historical backfill complete. Check database for multiple snapshot_dates."
+            f"\n✅ SUCCESS! Database updated with job data."
         )
 
     except Exception as e:
