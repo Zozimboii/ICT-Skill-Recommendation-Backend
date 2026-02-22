@@ -1,5 +1,5 @@
 from playwright.sync_api import sync_playwright
-
+from app.utils.category_mapping import map_category
 
 def fetch_job_description(job_link: str) -> str:
     """ดึง detailed job description จากหน้างาน"""
@@ -121,13 +121,17 @@ def fetch_jobsdb(max_pages: int = 100, max_jobs: int = 5000, fetch_details: bool
                     except:
                         pass
 
-                    if full_link not in jobs:
-                        jobs[full_link] = {
-                            "title": title,
-                            "link": full_link,
-                            "posted_at_text": posted_text,
-                            "description": description,
-                        }
+                    # กรองเฉพาะงาน Information & Technology
+                    category = map_category(title)
+                    if category and category.get("main_category_id") == 6281:  # ICT category
+                        if full_link not in jobs:
+                            jobs[full_link] = {
+                                "title": title,
+                                "link": full_link,
+                                "posted_at_text": posted_text,
+                                "description": description,
+                                "category": category,  # เก็บข้อมูล category ด้วย
+                            }
                 except Exception as e:  # noqa: F841
                     continue
 

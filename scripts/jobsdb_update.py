@@ -9,8 +9,7 @@ from app.db.models import JobCountBySubCategory, JobCountHistory, JobSkillTrend,
 
 MAX_PAGES = 5
 MAX_JOBS = 100
-FETCH_JOB_DETAILS = False  # ตั้งเป็น True เพื่อดึง detailed description (จะช้า)
-
+FETCH_JOB_DETAILS = False
 
 def parse_posted_date(text):
     """คำนวณวันย้อนหลังจากข้อความ 'Posted 5 days ago'"""
@@ -30,7 +29,6 @@ def parse_posted_date(text):
         return today - timedelta(days=value * 30)
     return today
 
-
 def main():
     db = SessionLocal()
     try:
@@ -47,9 +45,9 @@ def main():
             print("❌ ERROR: Scraper returned 0 jobs!")
             return
 
-        # 0. บันทึกข้อมูลงานทั้งหมดลง job_data table
+        # บันทึกข้อมูลงานทั้งหมดลง job_data table
         print(f"\n💾 Saving raw job data to job_data table...")
-        db.query(Jobs_Data).delete()  # ลบข้อมูลเก่า
+        db.query(Jobs_Data).delete()
         
         for job in all_jobs:
             job_data = Jobs_Data(
@@ -62,7 +60,6 @@ def main():
         
         db.commit()
         print(f"   ✅ Saved {len(all_jobs)} jobs to job_data table")
-
         print(f"\n📦 Processing {len(all_jobs)} jobs for categorization...")
 
         # Show first 3 jobs
@@ -174,7 +171,6 @@ def main():
         db.rollback()
     finally:
         db.close()
-
 
 if __name__ == "__main__":
     main()
