@@ -78,3 +78,10 @@ class Jobs_Data(Base):
     link = Column(String(255))
     posted_at_text = Column(String(255))
     description = Column(Text, nullable=True)  # เพิ่ม description field
+
+class JobSkillsWithDes(Base):
+    __tablename__ = "job_skills_withdes"
+    id = Column(Integer, primary_key=True, index=True)
+    job_id = Column(Integer)  # Foreign key to Jobs_Data.id
+    hard_skill = Column(String(255), nullable=True)
+    soft_skill = Column(String(255), nullable=True)
