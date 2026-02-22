@@ -117,7 +117,7 @@ def fetch_jobsdb(max_pages: int = 100, max_jobs: int = 5000, fetch_details: bool
                             # เชื่อมบรรทัด 5 ขึ้นไป เป็น description
                             desc_lines = [line.strip() for line in lines[4:] if line.strip()]
                             # ดึงเฉพาะบรรทัดแรก ๆ (ประมาณ 200 ตัวอักษร)
-                            description = " ".join(desc_lines)[:300]
+                            description = " ".join(desc_lines)[:5000]
                     except:
                         pass
 
