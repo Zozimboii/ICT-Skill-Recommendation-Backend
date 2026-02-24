@@ -5,7 +5,7 @@ from sqlalchemy import func
 from app.scrapers.jobsdb_scapper import fetch_jobsdb
 from app.utils.category_mapping import map_category
 from app.db.database import SessionLocal
-from app.db.models import JobCountBySubCategory, JobCountHistory, JobSkillTrend, Jobs_Data
+from app.db.models import JobCountBySubCategory, JobCountHistory, JobSkillTrend, Jobs_Data, Location
 
 MAX_PAGES = 5
 MAX_JOBS = 100
@@ -50,11 +50,24 @@ def main():
         db.query(Jobs_Data).delete()
         
         for job in all_jobs:
+            location_name = job.get("location", "").strip()
+            location_id = None
+            
+            # หากมี location ให้หาหรือสร้าง Location record
+            if location_name:
+                location = db.query(Location).filter(Location.name == location_name).first()
+                if not location:
+                    location = Location(name=location_name)
+                    db.add(location)
+                    db.flush()  # flush to get the location.id
+                location_id = location.id
+            
             job_data = Jobs_Data(
                 title=job.get("title", ""),
                 link=job.get("link", ""),
                 posted_at_text=job.get("posted_at_text", ""),
-                description=job.get("description", "")
+                description=job.get("description", ""),
+                location_id=location_id
             )
             db.add(job_data)
         

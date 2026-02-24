@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import Column, Date, DateTime, Float, Integer, String, Text, func
+from sqlalchemy import Column, Date, DateTime, Float, Integer, String, Text, func, ForeignKey
 
 from .database import Base
 
@@ -71,6 +71,11 @@ class JobSkillTrend(Base):
     sub_category_id = Column(Integer)
     count = Column(Integer)
 
+class Location(Base):
+    __tablename__ = "location"
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    name = Column(String(255), unique=True, nullable=False)
+
 class Jobs_Data(Base):
     __tablename__ = "job_data"
     id = Column(Integer, primary_key=True, index=True)
@@ -78,6 +83,7 @@ class Jobs_Data(Base):
     link = Column(String(255))
     posted_at_text = Column(String(255))
     description = Column(Text, nullable=True)  # เพิ่ม description field
+    location_id = Column(Integer, ForeignKey("location.id"), nullable=True)  # Foreign key to Location table
 
 class JobSkillsWithDes(Base):
     __tablename__ = "job_skills_withdes"

@@ -97,26 +97,27 @@ def fetch_jobsdb(max_pages: int = 100, max_jobs: int = 5000, fetch_details: bool
                         f"https://th.jobsdb.com{link}" if link.startswith("/") else link
                     )
 
-                    # ดึง title และ date จาก text content
-                    # Format: "Listed X days ago\nJob Title\nCompany..."
+                    # ดึง title, company, location, date จาก text content
+                    # Format: "Listed X days ago\nJob Title\nCompany\nLocation..."
                     all_text = card.inner_text().strip()
-                    lines = all_text.split('\n')
+                    lines = [line.strip() for line in all_text.split('\n') if line.strip()]
                     
                     posted_text = lines[0] if lines else ""  # บรรทัดแรก: "Listed..."
-                    title = lines[1].strip() if len(lines) > 1 else ""  # บรรทัดที่ 2: job title
+                    title = lines[1] if len(lines) > 1 else ""  # บรรทัดที่ 2: job title
+                    company = lines[2] if len(lines) > 2 else ""  # บรรทัดที่ 3: company
+                    location = lines[3] if len(lines) > 3 else ""  # บรรทัดที่ 4: location
                     
                     if not title:
                         continue
 
                     # ดึง description จากหน้า list (preview text)
-                    # ลองหาข้อความส่วนที่นอก title, company, posted date
                     description = ""
                     try:
-                        # description อาจอยู่ในบรรทัด 4 เป็นต้นไป (ข้ามบรรทัด date, title, company)
+                        # description อาจอยู่ในบรรทัด 5 เป็นต้นไป (ข้ามบรรทัด date, title, company, location)
                         if len(lines) > 4:
                             # เชื่อมบรรทัด 5 ขึ้นไป เป็น description
-                            desc_lines = [line.strip() for line in lines[4:] if line.strip()]
-                            # ดึงเฉพาะบรรทัดแรก ๆ (ประมาณ 200 ตัวอักษร)
+                            desc_lines = lines[4:]
+                            # ดึงเฉพาะบรรทัดแรก ๆ (ประมาณ 5000 ตัวอักษร)
                             description = " ".join(desc_lines)[:5000]
                     except:
                         pass
@@ -130,6 +131,7 @@ def fetch_jobsdb(max_pages: int = 100, max_jobs: int = 5000, fetch_details: bool
                                 "link": full_link,
                                 "posted_at_text": posted_text,
                                 "description": description,
+                                "location": location,
                                 "category": category,  # เก็บข้อมูล category ด้วย
                             }
                 except Exception as e:  # noqa: F841

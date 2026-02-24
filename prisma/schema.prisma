@@ -89,3 +89,26 @@ model JobSkillCountBySkillname {
 
   @@map("job_skill_count_by_skillname")
 }
+
+// --- ตาราง Location ---
+model Location {
+  id       Int       @id @default(autoincrement())
+  jobId    Int       @unique @map("job_id")
+  company  String    @db.VarChar(255)
+  location String?   @db.VarChar(255)
+  jobsData JobsData  @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@map("location")
+}
+
+// --- ตาราง Jobs Data ---
+model JobsData {
+  id           Int       @id @default(autoincrement())
+  title        String?   @db.VarChar(255)
+  link         String?   @db.VarChar(255)
+  postedAtText String?   @map("posted_at_text") @db.VarChar(255)
+  description  String?   @db.Text
+  location     Location?
+
+  @@map("job_data")
+}
