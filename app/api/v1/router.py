@@ -1,7 +1,7 @@
 # app/api/v1/api.py
 from fastapi import APIRouter
 
-from app.api.v1 import advisor, auth, chat, jobs, positions, skills, trends
+from app.api.v1 import advisor, auth, chat, jobs, positions, skills, transcripts, trends
 
 router = APIRouter(prefix="/api/v1")
 
@@ -12,3 +12,4 @@ router.include_router(trends.router, prefix="/trends", tags=["trends"])
 router.include_router(auth.router, prefix="/auth", tags=["auth"])
 router.include_router(chat.router, prefix="/chat", tags=["chat"])
 router.include_router(positions.router, prefix="/positions", tags=["positions"])
+router.include_router(transcripts.router, prefix="/transcripts", tags=["transcripts"])

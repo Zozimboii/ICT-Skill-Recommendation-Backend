@@ -89,5 +89,13 @@ class JobSkillsWithDes(Base):
     __tablename__ = "job_skills_withdes"
     id = Column(Integer, primary_key=True, index=True)
     job_id = Column(Integer)  # Foreign key to Jobs_Data.id
-    hard_skill = Column(String(255), nullable=True)
-    soft_skill = Column(String(255), nullable=True)
+    hard_skills = Column(String(255), nullable=True)
+    soft_skills = Column(String(255), nullable=True)
+
+class Job_transcript(Base):
+    __tablename__ = "job_transcript"
+    id = Column(Integer, primary_key=True, index=True)
+    username = Column(String(50), nullable=False)
+    file_name = Column(String(255), nullable=True)
+    soft_skills = Column(Text, nullable=True)
+    hard_skills = Column(Text, nullable=True)

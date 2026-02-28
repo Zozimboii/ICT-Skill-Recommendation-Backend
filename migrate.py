@@ -19,6 +19,7 @@ from app.db.models import (
     JobSkillCountBySkillname,
     JobSkillsWithCategories,
     JobSkillsWithDes,
+    Job_transcript,
 )
 
 # สร้างตาราง
