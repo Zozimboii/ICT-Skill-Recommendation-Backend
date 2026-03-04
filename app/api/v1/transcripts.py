@@ -64,6 +64,7 @@ async def upload_transcript(
         result = process_transcript_file(
             db=db,
             username=current_user.username,
+            file_name=file.filename,
             file_bytes=content,
             file_ext=file_ext
         )
@@ -85,3 +86,15 @@ async def upload_transcript(
             status_code=500,
             detail=f"Internal server error: {str(e)}"
         )
+
+@router.get("/list", response_model=TranscriptListResponse)
+def list_transcripts(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    transcripts = get_all_transcripts(db)
+    return TranscriptListResponse(
+        status="success",
+        message="Successfully retrieved transcripts",
+        data=transcripts
+    )

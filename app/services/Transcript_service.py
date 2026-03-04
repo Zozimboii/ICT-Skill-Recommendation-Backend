@@ -48,7 +48,7 @@ def extract_skills_from_transcript(transcript_text: str) -> Dict[str, List[str]]
     import google.generativeai as genai
 
     if not GEMINI_API_KEY:
-        return {"hard_skills": [], "soft_skills": []}
+        return {"hard_skills": [], "soft_skills": [], "recommend_job": []}
 
     genai.configure(api_key=GEMINI_API_KEY)
 
@@ -59,11 +59,12 @@ def extract_skills_from_transcript(transcript_text: str) -> Dict[str, List[str]]
 {transcript_text}
 
 กรุณาแยก Hard Skills และ Soft Skills
-
+และแนะนำสายงานที่เหมาะสมที่สุดสำหรับผู้ที่มีทักษะเหล่านี้ อย่างน้อย 5 สายงาน
 ตอบเฉพาะ JSON ในรูปแบบนี้เท่านั้น:
 {{
   "hard_skills": ["skill1", "skill2"],
-  "soft_skills": ["skill1", "skill2"]
+  "soft_skills": ["skill1", "skill2"],
+  "recommend_job": ["job1", "job2", "job3"]
 }}
 """
 
@@ -81,23 +82,28 @@ def extract_skills_from_transcript(transcript_text: str) -> Dict[str, List[str]]
 
         return {
             "hard_skills": result.get("hard_skills", []),
-            "soft_skills": result.get("soft_skills", [])
+            "soft_skills": result.get("soft_skills", []),
+            "recommend_job": result.get("recommend_job", [])
         }
 
     except Exception:
-        return {"hard_skills": [], "soft_skills": []}
+        return {"hard_skills": [], "soft_skills": [], "recommend_job": []}
 
 def save_transcript_skills(
     db: Session,
     username: str,
+    file_name: str,
     hard_skills: List[str],
-    soft_skills: List[str]
+    soft_skills: List[str],
+    recommend_job: List[str]
 ) -> Dict:
 
     transcript = Job_transcript(
         username=username,
+        file_name=file_name,
         hard_skills=", ".join(hard_skills),
-        soft_skills=", ".join(soft_skills)
+        soft_skills=", ".join(soft_skills),
+        recommend_job=", ".join(recommend_job)
     )
 
     db.add(transcript)
@@ -107,13 +113,16 @@ def save_transcript_skills(
     return {
         "id": transcript.id,
         "username": transcript.username,
+        "file_name": transcript.file_name,
         "hard_skills": hard_skills,
-        "soft_skills": soft_skills
+        "soft_skills": soft_skills,
+        "recommend_job": recommend_job
     }
 
 def process_transcript_file(
     db: Session,
     username: str,
+    file_name: str,
     file_bytes: bytes,
     file_ext: str
 ) -> Dict:
@@ -130,8 +139,10 @@ def process_transcript_file(
         return {
             "id": None,
             "username": username,
+            "file_name": None,
             "hard_skills": [],
-            "soft_skills": []
+            "soft_skills": [],
+            "recommend_job": []
         }
 
     skills = extract_skills_from_transcript(text_content)
@@ -139,8 +150,10 @@ def process_transcript_file(
     return save_transcript_skills(
     db=db,
     username=username,
+    file_name=file_name,
     hard_skills=skills["hard_skills"],
-    soft_skills=skills["soft_skills"]
+    soft_skills=skills["soft_skills"],
+    recommend_job=skills["recommend_job"]
 )
 
 
@@ -163,11 +176,18 @@ def get_transcript_by_id(db: Session, transcript_id: int) -> Optional[Dict]:
         if transcript.soft_skill else []
     )
 
+    recommend_job = (
+        [s.strip() for s in transcript.recommend_job.split(",")]
+        if transcript.recommend_job else []
+    )
+
     return {
         "id": transcript.id,
         "username": transcript.username,
+        "file_name": transcript.file_name,
         "hard_skills": hard_skills,
-        "soft_skills": soft_skills
+        "soft_skills": soft_skills,
+        "recommend_job": recommend_job
     }
 
 def get_all_transcripts(db: Session) -> List[Dict]:
@@ -183,15 +203,22 @@ def get_all_transcripts(db: Session) -> List[Dict]:
         )
 
         soft_skills = (
-            [s.strip() for s in transcript.soft_skill.split(",")]
-            if transcript.soft_skill else []
+            [s.strip() for s in transcript.soft_skills.split(",")]
+            if transcript.soft_skills else []
+        )
+
+        recommend_job = (
+            [s.strip() for s in transcript.recommend_job.split(",")]
+            if transcript.recommend_job else []
         )
 
         result.append({
             "id": transcript.id,
             "username": transcript.username,
+            "file_name": transcript.file_name,
             "hard_skills": hard_skills,
-            "soft_skills": soft_skills
+            "soft_skills": soft_skills,
+            "recommend_job": recommend_job
         })
 
     return result

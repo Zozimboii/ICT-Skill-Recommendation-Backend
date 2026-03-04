@@ -5,8 +5,10 @@ from typing import List
 class TranscriptSkillResponse(BaseModel):
     id: int
     username: str
+    file_name: str
     hard_skills: List[str]
     soft_skills: List[str]
+    recommend_job: List[str]
 
 
 class TranscriptUploadResponse(BaseModel):

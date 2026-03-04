@@ -99,3 +99,4 @@ class Job_transcript(Base):
     file_name = Column(String(255), nullable=True)
     soft_skills = Column(Text, nullable=True)
     hard_skills = Column(Text, nullable=True)
+    recommend_job = Column(Text, nullable=True)
