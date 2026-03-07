@@ -6,7 +6,7 @@ Migration script to update database schema
 
 from sqlalchemy import Column, DateTime, func
 
-from app.db.database import Base, engine
+from app.core.database import Base, engine
 from app.db.models import JobCountBySubCategory, JobCountHistory, User
 
 # สร้างตาราง

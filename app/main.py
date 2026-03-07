@@ -1,8 +1,9 @@
+# main.py
 from datetime import datetime
 
 from fastapi import FastAPI, status
 from fastapi.responses import JSONResponse
-
+import app.model
 from app.api.v1.router import router as api_v1_router
 from app.core.cors import setup_cors
 

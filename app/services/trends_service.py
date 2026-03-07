@@ -1,50 +1,70 @@
 # backend/app/services/trends_service.py
-# from datetime import datetime
-# from app.scrapers.jobsdb_scapper import fetch_jobsdb
+# from datetime import datetime, timedelta
+# from sqlalchemy.orm import Session
+# from sqlalchemy import func
+# from app.db.models import JobPosting, JobSkill
 
-# def jobsdb_trend(limit: int = 20):
-#     jobs = fetch_jobsdb()
-#     items = summarize_job_title_trend(jobs, limit)
+
+# def get_jobsdb_trend(db: Session, days: int = 60):
+#     limit_date = datetime.now().date() - timedelta(days=days)
+
+#     results = (
+#         db.query(
+#             JobPosting.sub_category_id,
+#             JobPosting.sub_category_name,
+#             JobPosting.main_category_name,
+#             func.count(JobPosting.job_id).label("job_count"),
+#         )
+#         .filter(JobPosting.snapshot_date >= limit_date)
+#         .group_by(
+#             JobPosting.sub_category_id,
+#             JobPosting.sub_category_name,
+#             JobPosting.main_category_name,
+#         )
+#         .all()
+#     )
 
 #     return {
-#         "source": "JobsDB",
-#         "metric": "job_title_frequency",
-#         "as_of": datetime.utcnow().isoformat(),
-#         "items": items,
+#         "series": [
+#             {
+#                 "sub_category_id": r.sub_category_id,
+#                 "sub_category_name": r.sub_category_name,
+#                 "main_category_name": r.main_category_name,
+#                 "job_count": r.job_count,
+#             }
+#             for r in results
+#         ]
 #     }
 
-# from app.utils.trend_utils import summarize_job_title_trend
 
+# def get_skills_trend(db: Session, days: int = 60):
+#     limit_date = datetime.now().date() - timedelta(days=days)
 
-# def jobsdb_trend(days: int = 30, limit: int = 10):
-#     jobs = []
+#     results = (
+#         db.query(
+#             JobSkill.skill_name,
+#             JobSkill.skill_type,
+#             JobPosting.sub_category_id,
+#             func.count(JobSkill.id).label("count"),
+#         )
+#         .join(JobPosting, JobSkill.job_id == JobPosting.job_id)
+#         .filter(JobPosting.snapshot_date >= limit_date)
+#         .group_by(
+#             JobSkill.skill_name,
+#             JobSkill.skill_type,
+#             JobPosting.sub_category_id,
+#         )
+#         .all()
+#     )
 
-#     items = summarize_job_title_trend(jobs, limit)
-
-#     return {"series": items}
-
-from sqlalchemy import func
-from sqlalchemy.orm import Session
-
-from app.db.models import JobCountHistory
-
-
-def jobsdb_trend(db: Session, days: int = 30):
-    # รวม job_count ของทุก sub_category ในวันเดียวกัน
-    rows = (
-        db.query(
-            JobCountHistory.snapshot_date,
-            func.sum(JobCountHistory.job_count).label("total_count"),
-        )
-        .group_by(JobCountHistory.snapshot_date)
-        .order_by(JobCountHistory.snapshot_date.asc())  # เรียงจากเก่าไปใหม่สำหรับวาดกราฟ
-        .limit(days)
-        .all()
-    )
-
-    return {
-        "series": [
-            {"snapshot_date": str(r.snapshot_date), "job_count": int(r.total_count)}
-            for r in rows
-        ]
-    }
+#     return {
+#         "series": [
+#             {
+#                 "skill_name": r.skill_name,
+#                 "skill_type": r.skill_type,
+#                 "sub_category_id": r.sub_category_id,
+#                 "count": r.count,
+#             }
+#             for r in results
+#         ]
+#     }

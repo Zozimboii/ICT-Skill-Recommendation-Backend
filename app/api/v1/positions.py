@@ -1,188 +1,204 @@
-# app/api/v1/positions.py
-from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import distinct, func, select
-from sqlalchemy.orm import Session
+# # app/api/v1/positions.py
+# from fastapi import APIRouter, Depends, HTTPException, Query
+# from sqlalchemy import distinct, func, select
+# from sqlalchemy.orm import Session
 
-from app.db.database import get_db
-from app.db.models import JobCountBySubCategory, JobSkillsWithCategories, JobsSkill
-from app.schemas.positions import (
-    GapItem,
-    MatchResponse,
-    PositionItem,
-    PositionSkill,
-    PositionSkillsResponse,
-    UserSkillScore,
-)
+# from app.core.database import get_db
 
-router = APIRouter()
+# from app.schemas.positions import (
+#     GapItem,
+#     MatchResponse,
+#     PositionItem,
+#     PositionSkill,
+#     PositionSkillsResponse,
+#     UserSkillScore,
+# )
+# from app.model.job import Job, JobSkill
 
-
-def _demand(weight: int):
-    """แปลง weight (0-100) -> ระดับความต้องการ"""
-    if weight >= 80:
-        return ("HIGH", "ต้องการมาก")
-    if weight >= 50:
-        return ("MEDIUM", "ต้องการพอสมควร")
-    return ("LOW", "ต้องการน้อย")
+# router = APIRouter()
 
 
-def _load_position_row(db: Session, position_id: int):
-    row = (
-        db.query(JobCountBySubCategory)
-        .filter(JobCountBySubCategory.sub_category_id == position_id)
-        .first()
-    )
-    if not row:
-        raise HTTPException(status_code=404, detail="Position not found")
-    return row
+# def _demand(weight: int):
+#     """แปลง weight (0-100) -> ระดับความต้องการ"""
+#     if weight >= 80:
+#         return ("HIGH", "ต้องการมาก")
+#     if weight >= 50:
+#         return ("MEDIUM", "ต้องการพอสมควร")
+#     return ("LOW", "ต้องการน้อย")
 
 
-def _get_position_skills(db: Session, position_id: int, limit: int = 30):
-    """
-    aggregate skill จาก JobsSkill โดยอิง job_id ที่อยู่ใน sub_category_id นั้น
-    และคำนวณ weight 0-100 + demand_level/demand_label
-    """
-    # job_ids ของตำแหน่งนั้น (จาก job_skills_with_categories)
-    job_ids_subq = (
-        db.query(JobSkillsWithCategories.job_id)
-        .filter(JobSkillsWithCategories.sub_category_id == position_id)
-        .subquery()
-    )
 
-    total_jobs = (
-        db.query(func.count(distinct(JobSkillsWithCategories.job_id)))
-        .filter(JobSkillsWithCategories.sub_category_id == position_id)
-        .scalar()
-        or 0
-    )
+# def _get_position_skills(db: Session, position_id: int, limit: int = 30):
 
-    if total_jobs == 0:
-        return total_jobs, []
+#     # total jobs ของตำแหน่งนี้
+#     total_jobs = (
+#         db.query(func.count(Job.id))
+#         .filter(Job.sub_category_id == position_id)
+#         .scalar()
+#         or 0
+#     )
 
-    # นับ skill ต่อจำนวน job ที่พบ skill นั้น
-    rows = (
-        db.query(
-            JobsSkill.skill_name.label("skill_name"),
-            func.count(distinct(JobsSkill.job_id)).label("count"),
-        )
-        .filter(JobsSkill.job_id.in_(select(job_ids_subq.c.job_id)))
-        .group_by(JobsSkill.skill_name)
-        .order_by(func.count(distinct(JobsSkill.job_id)).desc())
-        .limit(limit)
-        .all()
-    )
+#     if total_jobs == 0:
+#         return 0, []
 
-    skills = []
-    for skill_name, cnt in rows:
-        # weight 0-100 = สัดส่วน job ในตำแหน่งนี้ที่ประกาศ skill นั้น
-        weight = int(round((int(cnt) / int(total_jobs)) * 100))
-        lvl, label = _demand(weight)
+#     rows = (
+#         db.query(
+#             func.lower(JobSkill.skill_name).label("skill_name"),
+#             func.count(func.distinct(JobSkill.job_id)).label("count"),
+#         )
+#         .join(Job, Job.id == JobSkill.job_id)
+#         .filter(Job.sub_category_id == position_id)
+#         .group_by(func.lower(JobSkill.skill_name))
+#         .order_by(func.count(func.distinct(JobSkill.job_id)).desc())
+#         .limit(limit)
+#         .all()
+#     )
 
-        skills.append(
-            {
-                "skill_name": skill_name,
-                "count": int(cnt),
-                "weight": weight,
-                "demand_level": lvl,
-                "demand_label": label,
-            }
-        )
+#     skills = []
 
-    return total_jobs, skills
+#     for skill_name, cnt in rows:
+#         weight = int(round((cnt / total_jobs) * 100))
 
+#         if weight >= 80:
+#             lvl, label = "HIGH", "ต้องการมาก"
+#         elif weight >= 50:
+#             lvl, label = "MEDIUM", "ต้องการพอสมควร"
+#         else:
+#             lvl, label = "LOW", "ต้องการน้อย"
 
-@router.get("", response_model=list[PositionItem])
-def list_positions(
-    db: Session = Depends(get_db),
-    main_category_id: int | None = Query(None),
-    limit: int = Query(100, ge=1, le=500),
-):
-    q = db.query(JobCountBySubCategory)
-    if main_category_id is not None:
-        q = q.filter(JobCountBySubCategory.main_category_id == main_category_id)
+#         skills.append(
+#             {
+#                 "skill_name": skill_name,
+#                 "count": int(cnt),
+#                 "weight": weight,
+#                 "demand_level": lvl,
+#                 "demand_label": label,
+#             }
+#         )
 
-    rows = q.order_by(JobCountBySubCategory.job_count.desc()).limit(limit).all()
+#     return total_jobs, skills
 
-    return [
-        PositionItem(
-            id=str(r.sub_category_id),
-            name=r.sub_category_name,
-            main_category_id=r.main_category_id,
-            main_category_name=r.main_category_name,
-            job_count=r.job_count or 0,
-        )
-        for r in rows
-    ]
+# @router.get("", response_model=list[PositionItem])
+# def list_positions(
+#     db: Session = Depends(get_db),
+#     limit: int = Query(100, ge=1, le=500),
+# ):
 
+#     rows = (
+#         db.query(
+#             Job.sub_category_id,
+#             Job.sub_category_name,
+#             func.count(Job.id).label("job_count"),
+#         )
+#         .group_by(
+#             Job.sub_category_id,
+#             Job.sub_category_name,
+#         )
+#         .order_by(func.count(Job.id).desc())
+#         .limit(limit)
+#         .all()
+#     )
 
-@router.get("/{id}/skills", response_model=PositionSkillsResponse)
-def get_position_skills(
-    id: int,
-    db: Session = Depends(get_db),
-    limit: int = Query(30, ge=1, le=200),
-):
-    pos = _load_position_row(db, id)
-    total_jobs, skills = _get_position_skills(db, id, limit=limit)
+#     return [
+#         PositionItem(
+#             id=str(r.sub_category_id),
+#             name=r.sub_category_name,
+#             main_category_id=None,
+#             main_category_name=None,
+#             job_count=r.job_count,
+#         )
+#         for r in rows
+#     ]
 
-    return PositionSkillsResponse(
-        position_id=str(pos.sub_category_id),
-        position_name=pos.sub_category_name,
-        total_jobs=int(total_jobs),
-        skills=[PositionSkill(**s) for s in skills],
-    )
+# # @router.get("/{id}/skills", response_model=PositionSkillsResponse)
+# # def get_position_skills(
+# #     id: int,
+# #     db: Session = Depends(get_db),
+# #     limit: int = Query(30, ge=1, le=200),
+# # ):
 
+# #     # หา position name จาก JobPosting
+# #     pos = (
+# #         db.query(
+# #             JobPosting.sub_category_id,
+# #             JobPosting.sub_category_name
+# #         )
+# #         .filter(JobPosting.sub_category_id == id)
+# #         .first()
+# #     )
 
-@router.post("/{id}/match", response_model=MatchResponse)
-def match_position(
-    id: int,
-    user_skills: list[UserSkillScore],
-    db: Session = Depends(get_db),
-    limit: int = Query(30, ge=1, le=200),
-):
-    pos = _load_position_row(db, id)
-    _total_jobs, job_skills = _get_position_skills(db, id, limit=limit)
+# #     if not pos:
+# #         raise HTTPException(status_code=404, detail="Position not found")
 
-    # normalize user score -> 0-100
-    user_map = {}
-    for s in user_skills:
-        name = s.skill_name.strip()
-        if not name:
-            continue
-        user_map[name.lower()] = int(s.score) * 20  # 0-100
+# #     total_jobs, skills = _get_position_skills(db, id, limit=limit)
 
-    job_map = {s["skill_name"].strip().lower(): int(s["weight"]) for s in job_skills}
+# #     return PositionSkillsResponse(
+# #         position_id=str(pos.sub_category_id),
+# #         position_name=pos.sub_category_name,
+# #         total_jobs=int(total_jobs),
+# #         skills=[PositionSkill(**s) for s in skills],
+# #     )
 
-    # รวม label
-    labels = list({*user_map.keys(), *job_map.keys()})
-    labels.sort()
+# # @router.post("/{id}/match", response_model=MatchResponse)
+# # def match_position(
+# #     id: int,
+# #     user_skills: list[UserSkillScore],
+# #     db: Session = Depends(get_db),
+# #     limit: int = Query(30, ge=1, le=200),
+# # ):
 
-    user_data = [user_map.get(k, 0) for k in labels]
-    job_data = [job_map.get(k, 0) for k in labels]
+# #     pos = (
+# #         db.query(
+# #             JobPosting.sub_category_id,
+# #             JobPosting.sub_category_name
+# #         )
+# #         .filter(JobPosting.sub_category_id == id)
+# #         .first()
+# #     )
 
-    # match%: เฉลี่ย min(user, job)/job ของเฉพาะ skill ที่ job>0
-    ratios = []
-    for j, u in zip(job_data, user_data):
-        if j <= 0:
-            continue
-        ratios.append(min(u, j) / j)
+# #     if not pos:
+# #         raise HTTPException(status_code=404, detail="Position not found")
 
-    match_percent = int(round((sum(ratios) / len(ratios)) * 100)) if ratios else 0
+# #     _total_jobs, job_skills = _get_position_skills(db, id, limit=limit)
 
-    # gaps: job - user (เฉพาะ gap>0)
-    gaps = []
-    for key, j, u in zip(labels, job_data, user_data):
-        gap = max(j - u, 0)
-        if gap > 0:
-            gaps.append(GapItem(skill_name=key, gap=int(gap)))
+# #     # normalize user score -> 0-100
+# #     user_map = {}
+# #     for s in user_skills:
+# #         name = s.skill_name.strip()
+# #         if not name:
+# #             continue
+# #         user_map[name.lower()] = int(s.score) * 20
 
-    gaps = sorted(gaps, key=lambda x: x.gap, reverse=True)[:10]
+# #     job_map = {s["skill_name"].strip().lower(): int(s["weight"]) for s in job_skills}
 
-    return MatchResponse(
-        position_id=str(pos.sub_category_id),
-        position_name=pos.sub_category_name,
-        match_percent=match_percent,
-        labels=labels,
-        user_data=user_data,
-        job_data=job_data,
-        gaps=gaps,
-    )
+# #     labels = list({*user_map.keys(), *job_map.keys()})
+# #     labels.sort()
+
+# #     user_data = [user_map.get(k, 0) for k in labels]
+# #     job_data = [job_map.get(k, 0) for k in labels]
+
+# #     ratios = []
+# #     for j, u in zip(job_data, user_data):
+# #         if j <= 0:
+# #             continue
+# #         ratios.append(min(u, j) / j)
+
+# #     match_percent = int(round((sum(ratios) / len(ratios)) * 100)) if ratios else 0
+
+# #     gaps = []
+# #     for key, j, u in zip(labels, job_data, user_data):
+# #         gap = max(j - u, 0)
+# #         if gap > 0:
+# #             gaps.append(GapItem(skill_name=key, gap=int(gap)))
+
+# #     gaps = sorted(gaps, key=lambda x: x.gap, reverse=True)[:10]
+
+# #     return MatchResponse(
+# #         position_id=str(pos.sub_category_id),
+# #         position_name=pos.sub_category_name,
+# #         match_percent=match_percent,
+# #         labels=labels,
+# #         user_data=user_data,
+# #         job_data=job_data,
+# #         gaps=gaps,
+# #     )
