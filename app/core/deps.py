@@ -15,9 +15,8 @@ def get_current_user(
 ):
 
     payload = decode_token(token)
-    print("PAYLOAD:", payload)
     user_id = payload.get("sub")
-
+    user_rold = payload.get("role")
     if user_id is None:
         raise HTTPException(status_code=401, detail="Invalid token")
 

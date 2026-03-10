@@ -1,4 +1,4 @@
-# app/services/jobs/job_service.py  (api version)
+# app/services/jobs/jobs_service.py  (api version)
 
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import or_

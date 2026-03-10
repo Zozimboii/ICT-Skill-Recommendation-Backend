@@ -1,4 +1,4 @@
-
+# app/utils/skill_dict.py
 SKILL_DICT = {
 
     # =========================
@@ -174,13 +174,13 @@ SKILL_DICT.update({
     # =========================
     "Tailwind CSS": "hard_skill",
     "LESS": "hard_skill",
-    "Vite": "hard_skill",
     "Jest": "hard_skill",
     "NgRx": "hard_skill",
 
     # =========================
     # AI / NLP Advanced
     # =========================
+    "OpenAI API": "hard_skill",
     "LLMs": "hard_skill",
     "PEFT": "hard_skill",
 
@@ -318,10 +318,68 @@ SYNONYMS.update({
     "mac os": "macOS Operating System",
 })
 
+SKILL_DICT_ADDITIONS = {
+    # Backend Frameworks
+    "FastAPI":        "hard_skill",
+    "Django":         "hard_skill",
+    "Flask":          "hard_skill",
+    "Spring Boot":    "hard_skill",
+    "NestJS":         "hard_skill",
+
+    # ML / AI Frameworks
+    "PyTorch":        "hard_skill",
+    "TensorFlow":     "hard_skill",
+    "Scikit-learn":   "hard_skill",
+    "Pandas":         "hard_skill",
+    "NumPy":          "hard_skill",
+    "Hugging Face":   "hard_skill",
+
+    # Big Data
+    "Apache Spark":   "hard_skill",
+    "Hadoop":         "hard_skill",
+    "Kafka":          "hard_skill",
+    "Airflow":        "hard_skill",
+
+    # DevOps / Infra
+    "Kubernetes":     "hard_skill",
+    "Terraform":      "hard_skill",
+    "Ansible":        "hard_skill",
+    "Jenkins":        "hard_skill",
+    "GitHub Actions": "hard_skill",
+
+    # API
+    "GraphQL":        "hard_skill",
+    "REST API":       "hard_skill",
+    "Microservices":  "hard_skill",
+    "gRPC":           "hard_skill",
+
+    # Other
+    "Linux":          "hard_skill",
+    "C++":            "hard_skill",
+    "Java":           "hard_skill",
+    "Kotlin":         "hard_skill",
+    "Swift":          "hard_skill",
+    "React Native":   "hard_skill",
+    "Networking":     "hard_skill",
+    "Cybersecurity":  "hard_skill",
+    "Network Security": "hard_skill",
+    "Windows Server": "hard_skill",
+    "TCP/IP":         "hard_skill",
+    "NLP":            "hard_skill",
+    "Machine Learning": "hard_skill",
+    "Deep Learning":  "hard_skill",
+    "Data Science":   "hard_skill",
+    "QA":             "hard_skill",
+    "Automation Testing": "hard_skill",
+    "Scrum":          "hard_skill",
+    "Agile":          "hard_skill",
+    "UI Design":      "hard_skill",
+    "Critical Thinking": "soft_skill",
+    "Teamwork":       "soft_skill",
+}
 def get_skill_dict() -> dict:
     return SKILL_DICT
 
 
 def get_synonyms() -> dict:
     return SYNONYMS
-

@@ -1,4 +1,5 @@
 
+# app/model/recommendation.py
 from sqlalchemy import ForeignKey, Float, TIMESTAMP, Enum, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 

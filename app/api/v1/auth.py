@@ -1,3 +1,4 @@
+# app/api/v1/auth.py
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
@@ -10,7 +11,7 @@ from app.schemas.auth import (
 )
 from app.services.auth_service import AuthService
 
-router = APIRouter(tags=["auth"])  # ✅ ไม่ต้องใส่ prefix แล้ว
+router = APIRouter(tags=["auth"])
 auth_service = AuthService()
 @router.post("/register", response_model=RegisterResponse)
 def register(data: RegisterRequest, db: Session = Depends(get_db)):
@@ -19,11 +20,3 @@ def register(data: RegisterRequest, db: Session = Depends(get_db)):
 @router.post("/login", response_model=LoginResponse)
 def login(data: LoginRequest, db: Session = Depends(get_db)):
     return auth_service.login_user(db, data)
-# @router.post("/login", response_model=LoginResponse)
-# def login(data: LoginRequest, db: Session = Depends(get_db)):
-#     return login_user(db, data)
-
-
-# @router.post("/register", response_model=RegisterResponse)
-# def register(data: RegisterRequest, db: Session = Depends(get_db)):
-#     return register_user(db, data)

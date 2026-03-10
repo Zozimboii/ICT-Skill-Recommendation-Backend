@@ -1,22 +1,4 @@
-# from sqlalchemy import Column, Integer, String, Text, Date, TIMESTAMP
-# from sqlalchemy.sql import func
-# from app.model.base import Base
-
-# class Job(Base):
-#     __tablename__ = "jobs"
-
-#     id = Column(Integer, primary_key=True, index=True)
-#     external_id = Column(String(255), unique=True)
-#     title = Column(String(255))
-#     company_name = Column(String(255))
-#     location = Column(String(255))
-#     description = Column(Text)
-#     salary_min = Column(Integer)
-#     salary_max = Column(Integer)
-#     posted_date = Column(Date)
-#     source = Column(String(100))
-#     created_at = Column(TIMESTAMP, server_default=func.now())
-
+# app/model/job.py
 
 from sqlalchemy import Boolean, Enum, String, ForeignKey, Text, Integer, Date, TIMESTAMP, Float, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -31,29 +13,27 @@ class Job(Base):
     __tablename__ = "jobs"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    external_id: Mapped[str] = mapped_column(String(255), index=True)
+    external_id: Mapped[str] = mapped_column(String(255), unique=True, index=True)
     title: Mapped[str] = mapped_column(String(255))
     company_name: Mapped[str] = mapped_column(String(255))
-    location: Mapped[str] = mapped_column(String(255))
-    description: Mapped[str] = mapped_column(Text)
-    salary_min: Mapped[int] = mapped_column(Integer)
-    salary_max: Mapped[int] = mapped_column(Integer)
+    salary_min: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    salary_max: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    location:   Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     posted_date: Mapped[str] = mapped_column(Date)
     source: Mapped[str] = mapped_column(String(100))
     created_at: Mapped[str] = mapped_column(
         TIMESTAMP,
         server_default=func.current_timestamp()
     )
-    url: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)          # ✅ ใหม่
-    # ✅ ใช้แค่ FK
+    url: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)     
+
     sub_category_id: Mapped[Optional[int]] = mapped_column(
     Integer,
     ForeignKey("skill_categories.id"),
     nullable=True
 )
 
-    # relationship
-    sub_category = relationship("SkillCategory", back_populates="jobs")
     job_type: Mapped[Optional[str]] = mapped_column(                                # ✅ ใหม่
         Enum("full_time", "part_time", "contract", "internship", name="job_type_enum"),
         nullable=True
@@ -71,6 +51,7 @@ class Job(Base):
         back_populates="job",
         cascade="all, delete"
     )
+    sub_category = relationship("SkillCategory", back_populates="jobs")
     recommendations = relationship("Recommendation", back_populates="job")
 
 

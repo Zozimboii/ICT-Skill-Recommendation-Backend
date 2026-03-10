@@ -17,7 +17,7 @@ SUB_CATEGORIES = [
     {"id": 6298, "name": "Team Leaders"},
     {"id": 6282, "name": "Architects"},
     {"id": 6302, "name": "Web Development & Production"},
-    {"id": 6295, "name": "Programme & Project Management"},
+    {"id": 6295, "name": "Programmer & Project Management"},
     {"id": 6300, "name": "Telecommunications"},
     {"id": 6288, "name": "Engineering - Hardware"},
     {"id": 6284, "name": "Computer Operators"},

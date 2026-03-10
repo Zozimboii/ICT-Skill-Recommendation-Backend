@@ -1,7 +1,8 @@
+# app/services/scraper_service.py
 from playwright.sync_api import sync_playwright
 from bs4 import BeautifulSoup
 import time
-
+import re
 
 class ScraperService:
 
@@ -65,7 +66,6 @@ class ScraperService:
             salary_max = None
 
             if salary_text:
-                import re
                 numbers = re.findall(r"\d[\d,]*", salary_text)
                 if len(numbers) >= 1:
                     salary_min = int(numbers[0].replace(",", ""))
