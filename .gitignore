@@ -29,9 +29,6 @@ env/
 env.bak/
 venv.bak/
 
-# ถ้าใช้ Prisma กับ Python
-prisma/migrations/
-
 # Logs
 *.log
 logs/
@@ -40,3 +37,8 @@ logs/
 dist/
 build/
 *.egg-info/
+
+# ✅ เพิ่ม uploads/ และ output ที่ไม่ควร commit
++ uploads/
++ jobsdb_raw_output.json
++ unknown_skills.txt
