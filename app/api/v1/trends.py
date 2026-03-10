@@ -1,24 +1,14 @@
+# เพิ่มใน app/api/v1/trends.py
 from typing import Optional
 
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 from app.core.database import get_db
-# from app.services.trends_service import get_jobsdb_trend, get_skills_trend
 from app.services.jobs.trend_service import TrendService
-from app.services.jobs.skills_service import SkillService
+from app.services.jobs.skill_query_service import SkillService
 
 
 router = APIRouter()
-
-
-# @router.get("/jobsdb")
-# def job_trend(days: int = Query(60), db: Session = Depends(get_db)):
-#     return get_jobsdb_trend(db, days)
-
-
-# @router.get("/skills")
-# def skill_trend(days: int = Query(60), db: Session = Depends(get_db)):
-#     return get_skills_trend(db, days)
 
 
 @router.get("/jobs")
@@ -73,7 +63,6 @@ def get_jobs_by_skill(skill_id: int, limit: int = 20, db: Session = Depends(get_
     service = TrendService(db)
     return service.get_jobs_by_skill(skill_id, limit)
 
-# เพิ่มใน app/api/v1/trends.py
 
 @router.get("/sankey")
 def get_sankey(

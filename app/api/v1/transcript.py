@@ -1,5 +1,4 @@
-# app/api/transcript.py
-
+# app/api/v1/transcirpt.py
 from typing import List
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
@@ -13,61 +12,12 @@ from app.services.transcript_match.transcript_proessing_service import Transcrip
 from app.core.deps import get_current_user
 from app.model.skill import Skill, UserSkill
 from app.model.transcript import Transcript, TranscriptCourse
-from app.schemas.jobs import SkillOut
 from app.schemas.transcript import TranscriptDetailOut
 from app.model.job import Job
 from app.model.recommendation import Recommendation
 
 router = APIRouter()
 
-# @router.post("/upload-transcript")
-# def upload_transcript(data: dict, db: Session = Depends(get_db)):
-
-#     service = TranscriptProcessingService()
-
-#     transcript = service.process_transcript(
-#         db=db,
-#         user_id=data["user_id"],
-#         parsed_text=data["parsed_text"],
-#         course_list=data["courses"],
-#         gpa=data["gpa"],
-#         university=data["university"],
-#         major=data["major"],
-#         file_path=data["file_path"],
-#         ai_model=None  # ใส่ model ตอนพร้อม
-#     )
-
-#     return {
-#     "transcript": transcript,
-#     "courses": transcript.courses,
-#     "skills": transcript.user.skills,
-#     "recommendations": transcript.user.recommendations
-# }
-
-# @router.post("/upload-transcript")
-# async def upload_transcript(
-#     file: UploadFile = File(...),
-#     db: Session = Depends(get_db),
-#     current_user: User = Depends(get_current_user)
-# ):
-#     service = TranscriptProcessingService()
-
-#     transcript = service.process_pdf(
-#         db=db,
-#         file=file,
-#         user_id=current_user.id 
-#     )
-
-#     return {
-#         "message": "Transcript processed",
-#         "id": transcript.id
-#     }
-# @router.get("/{id}")
-# def get_transcript(id: int, db: Session = Depends(get_db)):
-#     service = TranscriptProcessingService()
-#     return service.get_full_transcript(db, id)
-
-# ✅ แบบใหม่ — ลบใน process_pdf เลย atomic
 @router.post("/upload-transcript")
 async def upload_transcript(
     file: UploadFile = File(...),
@@ -121,7 +71,7 @@ def get_my_transcript(
     }
 
 
-@router.get("/profile/skills")  # ← ลบ response_model ออกก่อน
+@router.get("/profile/skills")
 def get_my_skills(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
@@ -169,7 +119,7 @@ def get_my_recommendations(
             "title": job.title,
             "company_name": job.company_name,
             "location": job.location,
-            "sub_category": job.sub_category,
+            "sub_category": job.sub_category.name if job.sub_category else None,
             "match_score": round(rec.match_score, 2),
             "skill_match_percent": round(rec.skill_match_percent, 1),
         }

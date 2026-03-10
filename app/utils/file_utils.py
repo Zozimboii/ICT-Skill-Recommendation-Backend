@@ -1,10 +1,15 @@
+# app/utils/file_utils.py
 import os
 
-# from PyPDF2 import PdfReader
 import pdfplumber
 
+_upload_env = os.getenv("UPLOAD_DIR")
+if _upload_env:
+    UPLOAD_DIR = os.path.abspath(_upload_env)
+else:
+    BASE_DIR   = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    UPLOAD_DIR = os.path.join(BASE_DIR, "uploads")
 
-UPLOAD_DIR = "uploads"
 
 def save_file(file):
     os.makedirs(UPLOAD_DIR, exist_ok=True)
@@ -14,7 +19,6 @@ def save_file(file):
         buffer.write(file.file.read())
 
     return file_path
-
 
 
 def extract_text_from_pdf(file_path):

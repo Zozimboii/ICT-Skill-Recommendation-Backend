@@ -1,204 +1,131 @@
-# app/services/ai_transcript_service.py
-
+# app/services/transcript_match/ai_transcript_service.py
 import json
 import os
 import re
+import time
 import google.generativeai as genai
-from sqlalchemy.orm import Session
+import google.api_core.exceptions
 
-from app.model.ai_model import AITranscriptLog
 
 class AITranscriptService:
+
+    RETRY_WAIT = 30
+
     def __init__(self):
         genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
-        self.model = genai.GenerativeModel(
-            os.getenv("GEMINI_MODEL")
-        )
-    def infer_skills_from_courses(
-        self,
-        db: Session,
-        transcript,
-        course_names: list[str],
-        model
-    ) -> dict:
+        self.model = genai.GenerativeModel(os.getenv("GEMINI_MODEL"))
 
-        prompt = f"""
-        Given these courses:
-        {course_names}
+    def _generate_with_retry(self, prompt: str, config: dict = None, retries: int = 2) -> str | None:
+        for attempt in range(retries + 1):
+            try:
+                kwargs = {"generation_config": config} if config else {}
+                resp = self.model.generate_content(prompt, **kwargs)
+                return resp.text
+            except google.api_core.exceptions.ResourceExhausted as e:
+                delay_match = re.search(r'retry_delay \{\s*seconds: (\d+)', str(e))
+                wait = int(delay_match.group(1)) + 2 if delay_match else self.RETRY_WAIT
+                if attempt < retries:
+                    print(f"[AI QUOTA] 429 — รอ {wait}s แล้ว retry ({attempt+1}/{retries})")
+                    time.sleep(wait)
+                else:
+                    print(f"[AI QUOTA] quota หมด — ใช้ fallback parser")
+                    return None
+            except Exception as e:
+                print(f"[AI ERROR] {type(e).__name__}: {e}")
+                return None
 
-        Return JSON format:
-        [
-          {{
-            "course": "...",
-            "skills": ["skill1", "skill2"]
-          }}
-        ]
-
-        Only choose skills relevant to ICT domain.
+    def parse_transcript(self, text: str) -> dict:
         """
+        Parse transcript → structured dict
+        ถ้า AI quota หมด → fallback rule-based parser
+        """
+        EMPTY = {
+            "gpa": None, "university": "", "major": "",
+            "skills": [], "courses": [], "ai_status": "quota_exceeded"
+        }
 
-        response = self.model.generate_content(prompt)
+        try:
+            cleaned = re.sub(r"\s+", " ", text).strip()[:6000]
 
-        parsed = json.loads(response.text)
+            prompt = f"""You are an expert academic transcript parser specializing in Thai university transcripts.
+Your task is to extract structured data from the transcript text provided.
 
-        # log
-        log = AITranscriptLog(
-          transcript_id=transcript.id,
-          model_id=model.id,  # 🔥 เพิ่มตรงนี้
-          raw_response=parsed,
-          token_used=response.usage_metadata.total_token_count,
-          status="success"
-        )
+CONTEXT:
+- This is a Thai university academic transcript (ใบรายงานผลการศึกษา)
+- Course codes follow patterns like: CPE101, CS301, 01418101, EN101
+- Thai grading: A, B+, B, C+, C, D+, D, F, S, U, W, P
+- GPA scale: 0.00 – 4.00
+- Credits are typically 1–4 per course
+- University name may appear as Thai or English
+- Major/Faculty may be in Thai (คณะ/สาขา) or English
 
-        db.add(log)
+EXTRACTION RULES:
+1. Extract ALL courses found — do not skip any row
+2. For course_name: use the English name if both exist, otherwise Thai is fine
+3. For GPA: look for คะแนนเฉลี่ยสะสม, GPA, GPAX, or similar — take the FINAL cumulative GPA
+4. For skills: extract any technical skills, tools, or programming languages explicitly mentioned
+5. If a field is not found, use null for numbers and "" for strings
 
+Return STRICTLY VALID JSON only. No markdown. No explanation. No backticks.
 
-        return parsed
-    
+SCHEMA:
+{{
+  "gpa": number | null,
+  "university": string,
+  "major": string,
+  "skills": string[],
+  "courses": [
+    {{
+      "course_code": string,
+      "course_name": string,
+      "grade": string,
+      "credit": number
+    }}
+  ]
+}}
+
+TRANSCRIPT TEXT:
+{cleaned}"""
+
+            raw = self._generate_with_retry(prompt, config={"temperature": 0.0})
+
+            if raw is None:
+                print("[TRANSCRIPT] AI unavailable — switching to rule-based parser")
+                from app.utils.transcript_parser_fallback import parse_transcript_fallback
+                return parse_transcript_fallback(text)
+
+            raw = raw.strip()
+            if raw.startswith("```"):
+                raw = re.sub(r"```(?:json)?", "", raw).replace("```", "").strip()
+
+            parsed = json.loads(raw)
+
+            # Validate
+            if not isinstance(parsed.get("courses"), list):
+                parsed["courses"] = []
+            if not isinstance(parsed.get("skills"), list):
+                parsed["skills"] = []
+
+            parsed["ai_status"] = "success"
+            print(f"[AI TRANSCRIPT] parsed: gpa={parsed.get('gpa')} "
+                  f"courses={len(parsed.get('courses', []))} "
+                  f"skills={len(parsed.get('skills', []))}")
+            return parsed
+
+        except json.JSONDecodeError as e:
+            print(f"[AI PARSE ERROR] JSON decode failed: {e} — trying fallback")
+            from app.utils.transcript_parser_fallback import parse_transcript_fallback
+            return parse_transcript_fallback(text)
+        except Exception as e:
+            print(f"[AI ERROR] parse_transcript: {e}")
+            return EMPTY
+
     @staticmethod
-    def validate_gpa(gpa: float) -> float:
+    def validate_gpa(gpa) -> float:
         if gpa is None:
             return 0.0
-        
         try:
             gpa = float(gpa)
         except (ValueError, TypeError):
             return 0.0
-    
-        if 0 <= gpa <= 4:
-            return gpa
-        
-        return 0.0
-    def parse_transcript(self, text: str):
-
-        try:
-            text = re.sub(r"\s+", " ", text)
-            text = text[:6000]
-
-            prompt = f"""
-                You are a JSON extraction engine.
-
-                Return STRICTLY VALID JSON.
-                No explanation.
-                No markdown.
-                No backticks.
-                No extra text.
-
-                SCHEMA:
-                {{
-                  "gpa": number,
-                  "university": string,
-                  "major": string,
-                  "skills": string[],
-                  "courses": [
-                    {{
-                      "course_code": string,
-                      "course_name": string,
-                      "grade": string,
-                      "credit": number
-                    }}
-                  ]
-                }}
-
-                Transcript:
-                {text}
-                """
-
-            response = self.model.generate_content(
-                prompt,
-                generation_config={"temperature": 0.1}
-            )
-
-            raw_text = response.text.strip()
-
-            # 🔥 remove markdown wrapper safely
-            if raw_text.startswith("```"):
-                raw_text = raw_text.replace("```json", "")
-                raw_text = raw_text.replace("```", "")
-                raw_text = raw_text.strip()
-
-            parsed = json.loads(raw_text)
-
-            # safety check
-            if not isinstance(parsed.get("courses"), list):
-                parsed["courses"] = []
-
-            return parsed
-
-        except Exception as e:
-            print("AI ERROR:", e)
-
-            return {
-                "gpa": None,
-                "university": "",
-                "major": "",
-                "skills": [],
-                "courses": [],
-                "ai_status": "failed"
-            }
-    # def parse_transcript(self, text: str):
-    
-    #     try:
-    #         text = text[:6000]
-    
-    #         prompt = f"""
-    #                 You are a JSON extraction engine.
-
-    #                 Return STRICTLY VALID JSON.
-    #                 No explanation.
-    #                 No markdown.
-    #                 No backticks.
-    #                 No extra text.
-
-    #                 If any field is missing, return empty value.
-
-    #                 SCHEMA:
-    #                 {{
-    #                   "gpa": number,
-    #                   "university": string,
-    #                   "major": string,
-    #                   "skills": string[],
-    #                   "courses": [
-    #                     {{
-    #                       "course_code": string,
-    #                       "course_name": string,
-    #                       "grade": string,
-    #                       "credit": number
-    #                     }}
-    #                   ]
-    #                 }}
-
-    #                 Transcript:
-    #                 {text}
-    #                 """
-    
-    #         response = self.model.generate_content(
-    #             prompt,
-    #             generation_config={
-    #                 "temperature": 0.1
-    #             }
-    #         )
-    
-    #         raw_text = response.text.strip()
-    
-    #         print("RAW AI RESPONSE:")
-    #         print(raw_text)
-    
-    #         # ✅ ดึงเฉพาะ JSON block
-    #         json_match = re.search(r"\{.*\}", raw_text, re.DOTALL)
-    #         if not json_match:
-    #             raise Exception("No JSON found in AI response")
-    
-    #         clean_json = json_match.group()
-    
-    #         return json.loads(clean_json)
-    
-    #     except Exception as e:
-    #         print("AI ERROR:", e)
-    #         return {
-    #             "gpa": 0.0,
-    #             "university": "",
-    #             "major": "",
-    #             "skills": [],
-    #             "courses": []
-    #         }
+        return round(gpa, 2) if 0 <= gpa <= 4 else 0.0

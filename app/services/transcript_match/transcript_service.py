@@ -1,9 +1,7 @@
-# app/services/transcript_service.py
+# app/services/transcript_match/transcript_service.py
 
 from sqlalchemy.orm import Session
-
 from app.model.transcript import Transcript, TranscriptCourse
-
 
 
 class TranscriptService:
@@ -27,13 +25,10 @@ class TranscriptService:
             major=major,
             file_path=file_path
         )
-
         db.add(transcript)
-        db.commit()
+        db.flush()  
         db.refresh(transcript)
-
         return transcript
-
 
     def extract_courses(
         self,
@@ -41,25 +36,14 @@ class TranscriptService:
         transcript: Transcript,
         course_list: list[dict]
     ):
-        """
-        course_list = [
-            {
-                "course_code": "CS101",
-                "course_name": "Data Structures",
-                "grade": "A",
-                "credit": 3.0
-            }
-        ]
-        """
-
         for c in course_list:
             course = TranscriptCourse(
                 transcript_id=transcript.id,
-                course_code=c["course_code"],
-                course_name=c["course_name"],
-                grade=c["grade"],
-                credit=c["credit"]
+                course_code=c.get("course_code", ""),
+                course_name=c.get("course_name", ""),
+                grade=c.get("grade", ""),
+                credit=float(c.get("credit") or 0)
             )
             db.add(course)
 
-        db.commit()
+        db.flush()   # ✅ flush แทน commit

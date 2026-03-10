@@ -1,4 +1,4 @@
-# app/db/database.py
+# app/core/database.py
 import os
 
 from dotenv import load_dotenv

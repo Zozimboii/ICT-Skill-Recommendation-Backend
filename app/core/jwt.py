@@ -1,36 +1,25 @@
-# from datetime import datetime, timedelta
-# import os
-
-# import jwt
-
-# SECRET_KEY = os.getenv("SECRET_KEY")
-# ALGORITHM = "HS256"
-
-
-# def create_access_token(data: dict, expires_minutes: int = 60):
-#     to_encode = data.copy()
-#     expire = datetime.utcnow() + timedelta(minutes=expires_minutes)
-#     to_encode.update({"exp": expire})
-#     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
-
-from fastapi import HTTPException
-from datetime import datetime, timedelta
+# app/core/jwt.py
+from datetime import datetime, timedelta, timezone
 import os
+
 import jwt
+from fastapi import HTTPException
 
 SECRET_KEY = os.getenv("SECRET_KEY")
-ALGORITHM = "HS256"
+ALGORITHM  = os.getenv("ALGORITHM", "HS256")
+ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "30"))
 
-def create_access_token(data: dict, expires_minutes: int = 60):
+
+def create_access_token(data: dict, expires_minutes: int = None):
     to_encode = data.copy()
-    print("SECRET_KEY:", SECRET_KEY)
-    now = datetime.utcnow()
-    expire = now + timedelta(minutes=expires_minutes)
+    now    = datetime.now(timezone.utc)
+    expire = now + timedelta(minutes=expires_minutes or ACCESS_TOKEN_EXPIRE_MINUTES)
 
     to_encode.update({
-        "exp": expire,
-        "iat": now,
+        "exp":  expire,
+        "iat":  now,
         "type": "access"
+        
     })
 
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
@@ -44,3 +33,5 @@ def decode_token(token: str):
         raise HTTPException(status_code=401, detail="Token expired")
     except jwt.InvalidTokenError:
         raise HTTPException(status_code=401, detail="Invalid token")
+    
+    

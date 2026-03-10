@@ -67,7 +67,7 @@ class TrendService:
 
     def get_cross_data(self, sub_category: str = None, skill_id: int = None):
         if sub_category:
-            # Filter by category name → top skills ใน category นั้น
+
             results = (
                 self.db.query(
                     Skill.name.label("skill"),
@@ -75,8 +75,8 @@ class TrendService:
                 )
                 .join(JobSkill, Skill.id == JobSkill.skill_id)
                 .join(Job, Job.id == JobSkill.job_id)
-                .join(SkillCategory, Job.sub_category_id == SkillCategory.id)  # ✅ join
-                .filter(SkillCategory.name == sub_category)                    # ✅ filter ด้วยชื่อ
+                .join(SkillCategory, Job.sub_category_id == SkillCategory.id)  
+                .filter(SkillCategory.name == sub_category)                  
                 .group_by(Skill.name)
                 .order_by(func.count(JobSkill.job_id).desc())
                 .limit(10)
@@ -89,14 +89,14 @@ class TrendService:
             }
 
         if skill_id:
-            # Filter by skill → job categories ที่ใช้ skill นี้
+
             results = (
                 self.db.query(
-                    SkillCategory.name.label("sub_category"),        # ✅
+                    SkillCategory.name.label("sub_category"),       
                     func.count(Job.id).label("job_count"),
                 )
                 .join(JobSkill, Job.id == JobSkill.job_id)
-                .join(SkillCategory, Job.sub_category_id == SkillCategory.id)  # ✅
+                .join(SkillCategory, Job.sub_category_id == SkillCategory.id)  
                 .filter(JobSkill.skill_id == skill_id)
                 .filter(Job.sub_category_id.isnot(None))
                 .group_by(SkillCategory.id, SkillCategory.name)
@@ -122,7 +122,7 @@ class TrendService:
                 Job.id,
                 Job.title,
                 Job.company_name,
-                SkillCategory.name.label("sub_category"),  # ✅ join แทน Job.sub_category
+                SkillCategory.name.label("sub_category"),
             )
             .join(JobSkill, Job.id == JobSkill.job_id)
             .join(SkillCategory, Job.sub_category_id == SkillCategory.id, isouter=True)
@@ -140,18 +140,13 @@ class TrendService:
             }
             for r in results
         ]
-    # เพิ่มใน app/services/jobs/trend_service.py
 
     def get_sankey_data(self, top_categories: int = 8, top_skills_per_cat: int = 4):
         """
         Returns sankey links: sub_category → skill → weight
         weight = จำนวน job ที่มีทั้ง sub_category นั้น และ skill นั้น
         """
-        from sqlalchemy import func
-        from app.model.job import Job, JobSkill
-        from app.model.skill import Skill, SkillCategory
 
-        # ── 1. หา top sub_categories ตาม job count ─────────────────────────────
         top_cats = (
             self.db.query(
                 SkillCategory.id,
@@ -169,7 +164,6 @@ class TrendService:
 
         top_cat_ids = [r.id for r in top_cats]
 
-        # ── 2. หา top skills ของแต่ละ category ──────────────────────────────────
         results = (
             self.db.query(
                 SkillCategory.name.label("sub_category"),
@@ -181,14 +175,13 @@ class TrendService:
             .join(JobSkill, JobSkill.job_id == Job.id)
             .join(Skill, Skill.id == JobSkill.skill_id)
             .filter(SkillCategory.id.in_(top_cat_ids))
-            .filter(Skill.skill_type == "hard_skill")   # เอาแค่ hard skill ดู Sankey ชัดขึ้น
+            .filter(Skill.skill_type == "hard_skill")  
             .group_by(SkillCategory.name, Skill.name, Skill.skill_type)
             .order_by(SkillCategory.name, func.count(Job.id).desc())
             .all()
             
         )
 
-        # ── 3. เลือกแค่ top N skills ต่อ category ───────────────────────────────
         from collections import defaultdict
         cat_skill_counts = defaultdict(list)
         for r in results:
@@ -200,7 +193,6 @@ class TrendService:
 
         links = []
         for cat, skills in cat_skill_counts.items():
-            # sort ใหม่ให้ได้ top N
             top = sorted(skills, key=lambda x: x["weight"], reverse=True)[:top_skills_per_cat]
             links.extend(top)
 
