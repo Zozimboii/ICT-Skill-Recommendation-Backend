@@ -30,7 +30,7 @@
 # app/services/skill_creator_service.py
 from sqlalchemy.orm import Session
 
-from app.model.skill import Skill, SkillAlias
+from app.models.skill import Skill, SkillAlias
 from app.utils.skill_normalizer import normalize, CANONICAL_SKILLS
 
 

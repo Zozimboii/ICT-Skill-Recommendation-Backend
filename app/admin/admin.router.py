@@ -1,10 +1,12 @@
 # app/api/v1/admin.py
+import traceback
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 
-from app.model.user import User
+from app.models.user import User
 from app.services import admin_service
 from app.schemas.admin import (
     AdminStats,
@@ -17,7 +19,7 @@ from app.schemas.admin import (
     ScrapeResponse,
 )
 from app.core.deps import get_current_user
-from scripts import scrap
+from backend.app.services.scraping.job_scraper_service import JobScraperService
 
 router = APIRouter()
 
@@ -128,17 +130,17 @@ async def trigger_scrape(
     db: Session = Depends(get_db),
     _: User = Depends(require_admin),
 ):
-    """Trigger scraper — runs in background, returns immediately."""
     import asyncio
-    
 
     try:
+        service = JobScraperService()
         added = await asyncio.wait_for(
-            asyncio.to_thread(scrap, data.limit),
-            timeout=60.0,
+            asyncio.to_thread(service.run_scraping, data.limit),
+            timeout=300.0,
         )
-        return ScrapeResponse(message="Scrape completed", jobs_added=added)
+        return ScrapeResponse(message="Scrape completed", jobs_added=added or 0)
     except asyncio.TimeoutError:
         return ScrapeResponse(message="Scrape started (running in background)", jobs_added=0)
     except Exception as e:
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))

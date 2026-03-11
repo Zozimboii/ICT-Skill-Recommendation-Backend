@@ -1,7 +1,7 @@
 # app/api/v1/router.py
 from fastapi import APIRouter
 
-from app.api.v1 import  auth, jobs,trends ,transcript ,admin, dashboard
+from app.api.v1 import  auth, jobs,trends ,transcript ,admin, dashboard, assessment
 
 
 router = APIRouter(prefix="/api/v1")
@@ -18,3 +18,4 @@ router.include_router(transcript.router, prefix="/transcript", tags=["transcript
 
 router.include_router(dashboard.router,prefix="/dashboard", tags=["dashboard"] )
 router.include_router(admin.router,prefix="/admin", tags=["admin"])
+router.include_router(assessment.router,  prefix="/assessment",  tags=["assessment"])

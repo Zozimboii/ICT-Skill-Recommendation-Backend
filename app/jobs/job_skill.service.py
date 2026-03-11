@@ -1,8 +1,8 @@
 # # app/services/job_skill_service.py
 
 
-from app.model.job import Job, JobSkill
-from app.model.skill import Skill
+from app.models.job import Job, JobSkill
+from app.models.skill import Skill
 
 
 # ── Importance score constants ────────────────────────────────────────────────

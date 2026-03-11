@@ -8,8 +8,8 @@ from app.services.transcript_match.transcript_service import TranscriptService
 from app.services.transcript_match.ai_transcript_service import AITranscriptService
 from app.services.transcript_match.recommendation_engine import RecommendationEngine
 from app.services.transcript_match.skill_matching_engine import SkillMatchingEngine
-from app.model.transcript import Transcript
-from app.model.skill import UserSkill
+from app.models.transcript import Transcript
+from app.models.skill import UserSkill
 
 
 # ── Grade → score (0.0–1.0) ──────────────────────────────────────────────────
@@ -84,7 +84,7 @@ class TranscriptProcessingService:
 
             deleted = db.query(UserSkill).filter(
                 UserSkill.user_id == user_id,
-                UserSkill.source == "transcript"
+                UserSkill.source.in_(["transcript", "assessment"])
             ).delete()
             db.flush()
             print(f"[TRANSCRIPT] deleted {deleted} old user_skills")
