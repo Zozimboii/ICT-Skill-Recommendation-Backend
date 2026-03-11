@@ -8,15 +8,15 @@ import re
 from sqlalchemy import or_
 from app.core.database import SessionLocal
 
-from app.model.skill import Skill
+from app.models.skill import Skill
 from app.repositories.job_repository import JobRepository
 from app.services.ai_service import AIService
-from app.services.job_skill_service import JobSkillService
-from app.services.scraper_service import ScraperService
+from backend.app.services.jobs.job_skill_service import JobSkillService
+from backend.app.services.scraping.scraper_service import ScraperService
 
 from app.utils.category_config import SUB_CATEGORY_NAMES
 from app.utils.skill_dict import get_skill_dict, get_synonyms
-from app.services.skill_creator_service import SkillCreatorService
+from backend.app.services.scraping.skill_creator_service import SkillCreatorService
 from app.utils.skill_normalizer import normalize
 
 
@@ -82,7 +82,7 @@ class JobScraperService:
                 page += 1
 
             print(f"\n✅ Done — inserted: {inserted}, updated: {updated}, skipped: {skipped}, pages: {page-1}")
-
+            return inserted
         finally:
             db.close()
 
@@ -94,12 +94,12 @@ class JobScraperService:
         detail_data = self.scraper.fetch_job_detail(job["detail_url"])
         description = detail_data["description"]
         posted_text = detail_data["posted_text"]
-
+        
         metadata = self.ai_service.extract_job_metadata(
             title=job["title"],
             description=description,
         )
-
+        sub_cat_id = metadata.get("sub_category_id")
         job_data = {
             "external_id":      external_id,
             "title":            job["title"],
@@ -111,7 +111,7 @@ class JobScraperService:
             "posted_date":      self.parse_posted_date(posted_text),
             "source":           "jobsdb",
             "url":              job["detail_url"],
-            "sub_category_id":  metadata.get("sub_category_id"),
+            "sub_category_id":  sub_cat_id if sub_cat_id else None,
             "experience_level": metadata["experience_level"],
             "job_type":         job.get("job_type"),
         }
@@ -177,7 +177,8 @@ class JobScraperService:
                     title=job["title"],
                     description=description,
                 )
-                updates["sub_category_id"]  = metadata.get("sub_category_id")
+                sub_cat_id = metadata.get("sub_category_id")
+                updates["sub_category_id"]  = sub_cat_id if sub_cat_id else None  # ← 0 → None
                 updates["experience_level"] = metadata["experience_level"]
                 print(f"[UPDATE sub_category] {job['title']} → {metadata['sub_category']}")
 

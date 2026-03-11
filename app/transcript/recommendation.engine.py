@@ -3,9 +3,9 @@
 
 from sqlalchemy.orm import Session
 
-from app.model.job import Job, JobSkill
-from app.model.recommendation import Recommendation, RecommendationSkill
-from app.model.skill import UserSkill
+from app.models.job import Job, JobSkill
+from app.models.recommendation import Recommendation, RecommendationSkill
+from app.models.skill import UserSkill
 
 
 class RecommendationEngine:

@@ -241,7 +241,7 @@
 from sqlalchemy.orm import Session
 from sqlalchemy import select
 
-from app.model.skill import Skill, UserSkill ,SkillAlias
+from app.models.skill import Skill, UserSkill ,SkillAlias
 from app.utils.course_skill_map import COURSE_SKILL_MAP
 from app.utils.canonical_skills import normalize_skill
 

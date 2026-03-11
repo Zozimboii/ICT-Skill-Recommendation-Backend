@@ -1,7 +1,7 @@
 # app/services/transcript_match/transcript_service.py
 
 from sqlalchemy.orm import Session
-from app.model.transcript import Transcript, TranscriptCourse
+from app.models.transcript import Transcript, TranscriptCourse
 
 
 class TranscriptService:
