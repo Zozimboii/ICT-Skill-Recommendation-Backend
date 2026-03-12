@@ -4,8 +4,8 @@
 
 from app.core.database import SessionLocal
 from app.core.security import hash_password
-from app.model.user import User
-from app.model.skill import Skill, SkillCategory
+from app.models.user import User
+from app.models.skill import Skill, SkillCategory
 from app.utils.category_config import SUB_CATEGORIES
 from app.utils.skill_dict import SKILL_DICT
 
@@ -115,7 +115,7 @@ DEFAULT_ALIASES = [
 
 
 def seed_aliases(db):
-    from app.model.skill import Skill, SkillAlias
+    from app.models.skill import Skill, SkillAlias
     inserted = skipped = not_found = 0
 
     for alias_str, skill_name in DEFAULT_ALIASES:

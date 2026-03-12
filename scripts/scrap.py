@@ -1,8 +1,8 @@
 # scripts/scrap.py
 import sys
 
-from app.model import user, job, skill, transcript, recommendation, ai_model
-from app.services.job_scraper_service import JobScraperService
+from app.models import user, job, skill, transcript, recommendation, ai_model
+from app.scraping.job_scraper_service import JobScraperService
 
 
 if __name__ == "__main__":
