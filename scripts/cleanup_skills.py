@@ -15,10 +15,10 @@ import sys, os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from app.core.database import SessionLocal
-from app.model.skill import Skill, SkillAlias, UserSkill
-from app.model.job import JobSkill
+from app.models.skill import Skill, SkillAlias, UserSkill
+from app.models.job import JobSkill
 
-from app.model.recommendation import RecommendationSkill
+from app.models.recommendation import RecommendationSkill
 from app.utils.canonical_skills import SKILL_BLOCKLIST, SKILL_ALIASES, CANONICAL_SKILLS
 from sqlalchemy.orm import Session
 

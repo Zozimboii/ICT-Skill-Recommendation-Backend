@@ -11,8 +11,8 @@ import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from app.core.database import SessionLocal
-from app.model.skill import Skill
-from app.model.job import JobSkill
+from app.models.skill import Skill
+from app.models.job import JobSkill
 from sqlalchemy import func
 
 
