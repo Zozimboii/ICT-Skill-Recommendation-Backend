@@ -4,7 +4,7 @@ HOW TO: ใช้ normalize_skill ใน skill extraction service
 คัดลอก logic นี้ไปใส่ใน service ที่ทำการ extract skills จาก AI response
 """
 from app.utils.canonical_skills import normalize_skill, CANONICAL_SKILLS
-from app.model.skill import Skill, SkillAlias
+from app.models.skill import Skill, SkillAlias
 from sqlalchemy.orm import Session
 
 

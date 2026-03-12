@@ -9,7 +9,7 @@ import sys, os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from app.core.database import SessionLocal
-from app.model.skill import Skill, SkillAlias
+from app.models.skill import Skill, SkillAlias
 from app.utils.canonical_skills import CANONICAL_SKILLS, SKILL_ALIASES
 
 
