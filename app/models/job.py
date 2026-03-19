@@ -47,10 +47,7 @@ class Job(Base):
         back_populates="job",
         cascade="all, delete"
     )
-    ai_logs: Mapped[List["AIJobLog"]] = relationship(
-        back_populates="job",
-        cascade="all, delete"
-    )
+
     sub_category = relationship("SkillCategory", back_populates="jobs")
     recommendations = relationship("Recommendation", back_populates="job")
 

@@ -80,25 +80,33 @@ class JobService:
         page: int = 1,
         limit: int = 20,
     ) -> tuple[list[Job], int]:
+
         q = db.query(Job).options(
             joinedload(Job.skills).joinedload(JobSkill.skill)
         )
 
+        # ✅ JOIN skill (สำคัญมาก)
         if keyword and keyword.strip():
             kw = f"%{keyword.strip()}%"
-            q = q.filter(
-                or_(
-                    Job.title.ilike(kw),
-                    Job.company_name.ilike(kw),
-                    Job.description.ilike(kw),
-                )
-                # ✅ ตัด Job.sub_category.ilike ออก เพราะเป็น relationship แล้ว
+
+            q = (
+                q.outerjoin(JobSkill, Job.id == JobSkill.job_id)
+                 .outerjoin(Skill, JobSkill.skill_id == Skill.id)
+                 .filter(
+                    or_(
+                        Job.title.ilike(kw),
+                        Job.company_name.ilike(kw),
+                        Job.description.ilike(kw),
+                        Skill.name.ilike(kw),  # 🔥 ใช้ได้แล้ว
+                    )
+                 )
             )
 
+        # ✅ filter อื่น
         if sub_category and sub_category != "all":
             q = (
                 q.join(SkillCategory, Job.sub_category_id == SkillCategory.id)
-                 .filter(SkillCategory.name == sub_category)  # ✅
+                 .filter(SkillCategory.name == sub_category)
             )
 
         if job_type and job_type != "all":
@@ -107,13 +115,19 @@ class JobService:
         if experience_level and experience_level != "all":
             q = q.filter(Job.experience_level == experience_level)
 
+        # ✅ กัน duplicate (สำคัญ)
+        q = q.distinct()
+
+        # ✅ total ต้องนับหลัง filter ทั้งหมด
         total = q.count()
+
         jobs = (
             q.order_by(Job.posted_date.desc())
-            .offset((page - 1) * limit)
-            .limit(limit)
-            .all()
+             .offset((page - 1) * limit)
+             .limit(limit)
+             .all()
         )
+
         return jobs, total
 
     def get_sub_categories(self, db: Session) -> list[str]:
