@@ -33,10 +33,7 @@ class Transcript(Base):
         back_populates="transcript",
         cascade="all, delete"
     )
-    ai_logs: Mapped[List["AITranscriptLog"]] = relationship(
-        back_populates="transcript",
-        cascade="all, delete"
-    )
+
 
 
 class TranscriptCourse(Base):

@@ -1,6 +1,6 @@
 # app/trends/trends_service.py
 
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import func
 
 from app.models.job import Job, JobSkill
@@ -113,30 +113,21 @@ class TrendService:
             "skill_trend": self.get_skill_trend(db,limit=10),
         }
 
+
+
     def get_jobs_by_skill(self, db:Session, skill_id: int, limit: int = 20):
-        results = (
-            db.query(
-                Job.id,
-                Job.title,
-                Job.company_name,
-                SkillCategory.name.label("sub_category"),
-            )
+        jobs = (
+            db.query(Job)
+            .options(joinedload(Job.skills).joinedload(JobSkill.skill))
             .join(JobSkill, Job.id == JobSkill.job_id)
-            .join(SkillCategory, Job.sub_category_id == SkillCategory.id, isouter=True)
+            .distinct()
+            
             .filter(JobSkill.skill_id == skill_id)
-            .limit(limit)
+            .order_by(Job.posted_date.desc())  # 🔥 สำคัญมาก
             .all()
         )
 
-        return [
-            {
-                "id":           r.id,
-                "title":        r.title,
-                "sub_category": r.sub_category,
-                "company":      r.company_name,
-            }
-            for r in results
-        ]
+        return [self.serialize_job(job) for job in jobs]  # 🔥 ใช้ของเดิม
 
     def get_sankey_data(self, db:Session, top_categories: int = 8, top_skills_per_cat: int = 4):
         """
@@ -194,3 +185,31 @@ class TrendService:
             links.extend(top)
 
         return links
+    
+    @staticmethod
+    def serialize_job(job: Job) -> dict:
+        # ✅ sub_category ดึงจาก relationship
+        sub_cat_name = job.sub_category.name if job.sub_category else None
+
+        return {
+            "id":               job.id,
+            "title":            job.title,
+            "company_name":     job.company_name,
+            "location":         job.location,
+            "description":      job.description,
+            "sub_category":     sub_cat_name,        # ✅
+            "sub_category_id":  job.sub_category_id,
+            "job_type":         job.job_type,
+            "experience_level": job.experience_level,
+            "posted_date":      str(job.posted_date) if job.posted_date else None,
+            "url":              job.url,
+            "skills": [
+                {
+                    "id":         js.skill.id,
+                    "name":       js.skill.name,
+                    "skill_type": js.skill.skill_type,
+                }
+                for js in job.skills
+                if js.skill
+            ],
+        }
