@@ -18,12 +18,16 @@ from app.utils.skill_groups import group_skills
 from app.utils.career_path import build_career_path
 from app.utils.skill_importance import importance_tier, is_meaningful, should_include
 
+# ── จำนวน recs ที่แสดง ─────────────────────────────────────────────
+# ต้องเหมือนกันทั้ง get_skill_gap และ get_recommendations
+MAX_RECOMMENDATIONS = 5
+
+
 class DashboardService:
 
     def get_summary(self, db: Session, user_id: int) -> DashboardSummary:
         transcript = db.query(Transcript).filter(Transcript.user_id == user_id).first()
 
-        # มี skills จาก assessment ก็ถือว่าใช้ dashboard ได้
         has_assessment_skills = (
             db.query(UserSkill)
             .filter(UserSkill.user_id == user_id, UserSkill.source == "assessment")
@@ -54,15 +58,17 @@ class DashboardService:
             hard_skill_count=hard_count,
             soft_skill_count=soft_count,
             recommendation_count=rec_count,
-            has_transcript=True,   # ← True ถ้ามี transcript หรือ assessment skills
+            has_transcript=True,
         )
 
-    def get_skill_gap(self, db: Session, user_id: int) -> list[SkillGapResponse]:
+    # ── helper: ดึง recommendations พร้อม skills ──────────────────────
+    def _get_recs_with_skills(self, db: Session, user_id: int):
+        """Return list of (rec, job, rec_skills) sorted by match_score desc"""
         recommendations = (
             db.query(Recommendation)
             .filter(Recommendation.user_id == user_id)
             .order_by(Recommendation.match_score.desc())
-            .limit(3)
+            .limit(MAX_RECOMMENDATIONS)   # ← ใช้ค่าเดียวกัน
             .all()
         )
 
@@ -83,14 +89,21 @@ class DashboardService:
                 .filter(RecommendationSkill.recommendation_id == rec.id)
                 .all()
             )
+            result.append((rec, job, rec_skills))
 
-            # ── matched ───────────────────────────────────────────────────
+        return result
+
+    def get_skill_gap(self, db: Session, user_id: int) -> list[SkillGapResponse]:
+        result = []
+
+        for rec, job, rec_skills in self._get_recs_with_skills(db, user_id):
+
+            # ── matched ────────────────────────────────────────────────
             matched_all = [
                 (skill, imp or 0.5)
                 for rs, skill, imp in rec_skills
                 if rs.match_type == "matched"
             ]
-
             matched_items = [
                 SkillGapItem(
                     skill_name=skill.name,
@@ -101,34 +114,27 @@ class DashboardService:
                 )
                 for skill, imp in matched_all
             ]
-
-            # นับเฉพาะ meaningful สำหรับ display number
             matched_meaningful_count = sum(
                 1 for skill, imp in matched_all
                 if is_meaningful(importance_tier(imp), skill.frequency_score)
             )
 
-            # ── missing ───────────────────────────────────────────────────
+            # ── missing ────────────────────────────────────────────────
             missing_raw = [
                 (skill, imp or 0.5)
                 for rs, skill, imp in rec_skills
                 if rs.match_type == "missing"
             ]
-
             missing_filtered = [
                 (skill, imp) for skill, imp in missing_raw
                 if should_include(skill.frequency_score, importance_tier(imp))
             ]
-
-            # นับ meaningful missing สำหรับ denominator
             missing_meaningful_count = sum(
                 1 for skill, imp in missing_filtered
                 if is_meaningful(importance_tier(imp), skill.frequency_score)
             )
 
-            # denominator = meaningful matched + meaningful missing
             meaningful_total = matched_meaningful_count + missing_meaningful_count
-
             skill_match_pct = (
                 (matched_meaningful_count / meaningful_total * 100)
                 if meaningful_total > 0
@@ -143,7 +149,6 @@ class DashboardService:
                     -(x[0].frequency_score or 0),
                 ),
             )
-
             top10 = [
                 SkillGapItem(
                     skill_name=skill.name,
@@ -174,7 +179,6 @@ class DashboardService:
                 )
                 for gname, skills in grouped.items()
             ]
-
             career_path_raw = build_career_path(all_missing_dicts, max_steps=5)
             career_path = [CareerPathStep(**step) for step in career_path_raw]
 
@@ -190,42 +194,18 @@ class DashboardService:
                     missing_by_group=missing_by_group,
                     career_path=career_path,
                     total_missing=len(missing_sorted),
-                    total_job_skills=meaningful_total,        # ← required+recommended only
-                    matched_count=matched_meaningful_count,   # ← required+recommended only
+                    total_job_skills=meaningful_total,
+                    matched_count=matched_meaningful_count,
                     missing_group_count=len(missing_by_group),
                 )
             )
 
         return result
 
-
     def get_recommendations(self, db: Session, user_id: int) -> list[RecommendationItem]:
-        recs = (
-            db.query(Recommendation)
-            .filter(Recommendation.user_id == user_id)
-            .order_by(Recommendation.match_score.desc())
-            .limit(5)
-            .all()
-        )
-
         result = []
-        for rec in recs:
-            job = db.query(Job).filter(Job.id == rec.job_id).first()
-            if not job:
-                continue
 
-            rec_skills = (
-                db.query(RecommendationSkill, Skill, JobSkill.importance_score)
-                .join(Skill, RecommendationSkill.skill_id == Skill.id)
-                .outerjoin(
-                    JobSkill,
-                    (JobSkill.job_id == rec.job_id) &
-                    (JobSkill.skill_id == RecommendationSkill.skill_id),
-                )
-                .filter(RecommendationSkill.recommendation_id == rec.id)
-                .all()
-            )
-
+        for rec, job, rec_skills in self._get_recs_with_skills(db, user_id):
             matched_meaningful = sum(
                 1 for rs, skill, imp in rec_skills
                 if rs.match_type == "matched"
@@ -237,7 +217,6 @@ class DashboardService:
                 and is_meaningful(importance_tier(imp or 0.5), skill.frequency_score)
             )
             total_meaningful = matched_meaningful + missing_meaningful
-
             skill_match_pct = (
                 (matched_meaningful / total_meaningful * 100)
                 if total_meaningful > 0
