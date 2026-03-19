@@ -1,4 +1,4 @@
-# app/services/assessment_service.py
+# app/assessment/assessment_service.py
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 

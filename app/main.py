@@ -6,7 +6,7 @@ from fastapi.responses import JSONResponse
 
 from app.core.cors import setup_cors
 
-from app.models import user, job, skill, transcript, recommendation, ai_model
+from app.models import user, job, skill, transcript, recommendation
 from app.router import api_router
 
 def create_app() -> FastAPI:
