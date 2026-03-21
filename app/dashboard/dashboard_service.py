@@ -1,27 +1,49 @@
 # app/services/dashboard_service.py
 from sqlalchemy.orm import Session
-from sqlalchemy import func
 
-from app.models.transcript import Transcript
-from app.models.skill import Skill, UserSkill
-from app.models.recommendation import Recommendation, RecommendationSkill
-from app.models.job import Job, JobSkill
-from app.dashboard.dashboard_schema import (
-    DashboardSummary,
-    SkillGapItem,
-    SkillGapResponse,
-    SkillGroupItem,
-    CareerPathStep,
-    RecommendationItem,
-)
 from app.utils.skill_groups import group_skills
 from app.utils.career_path import build_career_path
-from app.utils.skill_importance import importance_tier, is_meaningful, should_include
+from app.dashboard.dashboard_schema import (
+    CareerPathStep, DashboardSummary, RecommendationItem,
+    SkillGapItem, SkillGapResponse, SkillGroupItem,
+)
+from app.models.job import Job, JobSkill
+from app.models.recommendation import Recommendation, RecommendationSkill
+from app.models.skill import Skill, UserSkill
+from app.models.transcript import Transcript
 
-# ── จำนวน recs ที่แสดง ─────────────────────────────────────────────
-# ต้องเหมือนกันทั้ง get_skill_gap และ get_recommendations
+# ── Thresholds ────────────────────────────────────────────────────────────────
+FREQUENCY_THRESHOLD = 0.10   # < 10%  = noise ตัดทิ้ง
+FREQ_REQUIRED       = 0.50   # >= 50% = required
+FREQ_RECOMMENDED    = 0.20   # >= 20% = recommended
+MAX_SKILL_GAP_RECS  = 5
 MAX_RECOMMENDATIONS = 5
 
+# ── Helper functions (module-level ไม่ใช่ method) ─────────────────────────────
+
+def _importance_tier_by_freq(freq: float | None) -> str:
+    """ตัดสิน importance จาก market demand จริง (frequency %)"""
+    f = freq or 0.0
+    if f >= FREQ_REQUIRED:      return "required"
+    if f >= FREQ_RECOMMENDED:   return "recommended"
+    return "optional"
+
+
+def _is_meaningful(importance: str, freq: float | None) -> bool:
+    """นับใน match score ไหม"""
+    if importance == "required":
+        return True
+    if importance == "recommended":
+        return (freq or 0) >= FREQUENCY_THRESHOLD
+    return False
+
+
+def _should_include(freq: float | None) -> bool:
+    """แสดงใน missing list ไหม"""
+    return (freq or 0) >= FREQUENCY_THRESHOLD
+
+
+# ── Service class ─────────────────────────────────────────────────────────────
 
 class DashboardService:
 
@@ -61,14 +83,26 @@ class DashboardService:
             has_transcript=True,
         )
 
-    # ── helper: ดึง recommendations พร้อม skills ──────────────────────
-    def _get_recs_with_skills(self, db: Session, user_id: int):
-        """Return list of (rec, job, rec_skills) sorted by match_score desc"""
+    def _get_rec_skills(self, db: Session, rec: Recommendation):
+        """ดึง skills พร้อม importance_score สำหรับ recommendation นี้"""
+        return (
+            db.query(RecommendationSkill, Skill, JobSkill.importance_score)
+            .join(Skill, RecommendationSkill.skill_id == Skill.id)
+            .outerjoin(
+                JobSkill,
+                (JobSkill.job_id == rec.job_id) &
+                (JobSkill.skill_id == RecommendationSkill.skill_id),
+            )
+            .filter(RecommendationSkill.recommendation_id == rec.id)
+            .all()
+        )
+
+    def get_skill_gap(self, db: Session, user_id: int) -> list[SkillGapResponse]:
         recommendations = (
             db.query(Recommendation)
             .filter(Recommendation.user_id == user_id)
             .order_by(Recommendation.match_score.desc())
-            .limit(MAX_RECOMMENDATIONS)   # ← ใช้ค่าเดียวกัน
+            .limit(MAX_SKILL_GAP_RECS)
             .all()
         )
 
@@ -78,27 +112,9 @@ class DashboardService:
             if not job:
                 continue
 
-            rec_skills = (
-                db.query(RecommendationSkill, Skill, JobSkill.importance_score)
-                .join(Skill, RecommendationSkill.skill_id == Skill.id)
-                .outerjoin(
-                    JobSkill,
-                    (JobSkill.job_id == rec.job_id) &
-                    (JobSkill.skill_id == RecommendationSkill.skill_id),
-                )
-                .filter(RecommendationSkill.recommendation_id == rec.id)
-                .all()
-            )
-            result.append((rec, job, rec_skills))
+            rec_skills = self._get_rec_skills(db, rec)
 
-        return result
-
-    def get_skill_gap(self, db: Session, user_id: int) -> list[SkillGapResponse]:
-        result = []
-
-        for rec, job, rec_skills in self._get_recs_with_skills(db, user_id):
-
-            # ── matched ────────────────────────────────────────────────
+            # ── matched ───────────────────────────────────────────────────────
             matched_all = [
                 (skill, imp or 0.5)
                 for rs, skill, imp in rec_skills
@@ -109,29 +125,36 @@ class DashboardService:
                     skill_name=skill.name,
                     skill_type=skill.skill_type,
                     status="matched",
-                    importance=importance_tier(imp),
+                    importance=_importance_tier_by_freq(skill.frequency_score),
                     frequency_score=skill.frequency_score,
                 )
                 for skill, imp in matched_all
             ]
             matched_meaningful_count = sum(
                 1 for skill, imp in matched_all
-                if is_meaningful(importance_tier(imp), skill.frequency_score)
+                if _is_meaningful(
+                    _importance_tier_by_freq(skill.frequency_score),
+                    skill.frequency_score,
+                )
             )
 
-            # ── missing ────────────────────────────────────────────────
+            # ── missing ───────────────────────────────────────────────────────
             missing_raw = [
                 (skill, imp or 0.5)
                 for rs, skill, imp in rec_skills
                 if rs.match_type == "missing"
             ]
             missing_filtered = [
-                (skill, imp) for skill, imp in missing_raw
-                if should_include(skill.frequency_score, importance_tier(imp))
+                (skill, imp)
+                for skill, imp in missing_raw
+                if _should_include(skill.frequency_score)
             ]
             missing_meaningful_count = sum(
                 1 for skill, imp in missing_filtered
-                if is_meaningful(importance_tier(imp), skill.frequency_score)
+                if _is_meaningful(
+                    _importance_tier_by_freq(skill.frequency_score),
+                    skill.frequency_score,
+                )
             )
 
             meaningful_total = matched_meaningful_count + missing_meaningful_count
@@ -141,20 +164,22 @@ class DashboardService:
                 else float(rec.skill_match_percent)
             )
 
+            # เรียง: required ก่อน → recommended → optional, แล้ว freq desc
             missing_sorted = sorted(
                 missing_filtered,
                 key=lambda x: (
-                    0 if importance_tier(x[1]) == "required" else
-                    1 if importance_tier(x[1]) == "recommended" else 2,
+                    0 if _importance_tier_by_freq(x[0].frequency_score) == "required" else
+                    1 if _importance_tier_by_freq(x[0].frequency_score) == "recommended" else 2,
                     -(x[0].frequency_score or 0),
                 ),
             )
+
             top10 = [
                 SkillGapItem(
                     skill_name=skill.name,
                     skill_type=skill.skill_type,
                     status="missing",
-                    importance=importance_tier(imp),
+                    importance=_importance_tier_by_freq(skill.frequency_score),
                     frequency_score=skill.frequency_score,
                 )
                 for skill, imp in missing_sorted[:10]
@@ -162,14 +187,15 @@ class DashboardService:
 
             all_missing_dicts = [
                 {
-                    "skill_name": skill.name,
-                    "skill_type": skill.skill_type,
-                    "status": "missing",
-                    "importance": importance_tier(imp),
+                    "skill_name":      skill.name,
+                    "skill_type":      skill.skill_type,
+                    "status":          "missing",
+                    "importance":      _importance_tier_by_freq(skill.frequency_score),
                     "frequency_score": skill.frequency_score,
                 }
                 for skill, imp in missing_sorted
             ]
+
             grouped = group_skills(all_missing_dicts)
             missing_by_group = [
                 SkillGroupItem(
@@ -179,8 +205,11 @@ class DashboardService:
                 )
                 for gname, skills in grouped.items()
             ]
-            career_path_raw = build_career_path(all_missing_dicts, max_steps=5)
-            career_path = [CareerPathStep(**step) for step in career_path_raw]
+
+            career_path = [
+                CareerPathStep(**step)
+                for step in build_career_path(all_missing_dicts, max_steps=5)
+            ]
 
             result.append(
                 SkillGapResponse(
@@ -203,18 +232,37 @@ class DashboardService:
         return result
 
     def get_recommendations(self, db: Session, user_id: int) -> list[RecommendationItem]:
-        result = []
+        recs = (
+            db.query(Recommendation)
+            .filter(Recommendation.user_id == user_id)
+            .order_by(Recommendation.match_score.desc())
+            .limit(MAX_RECOMMENDATIONS)
+            .all()
+        )
 
-        for rec, job, rec_skills in self._get_recs_with_skills(db, user_id):
+        result = []
+        for rec in recs:
+            job = db.query(Job).filter(Job.id == rec.job_id).first()
+            if not job:
+                continue
+
+            rec_skills = self._get_rec_skills(db, rec)
+
             matched_meaningful = sum(
                 1 for rs, skill, imp in rec_skills
                 if rs.match_type == "matched"
-                and is_meaningful(importance_tier(imp or 0.5), skill.frequency_score)
+                and _is_meaningful(
+                    _importance_tier_by_freq(skill.frequency_score),
+                    skill.frequency_score,
+                )
             )
             missing_meaningful = sum(
                 1 for rs, skill, imp in rec_skills
                 if rs.match_type == "missing"
-                and is_meaningful(importance_tier(imp or 0.5), skill.frequency_score)
+                and _is_meaningful(
+                    _importance_tier_by_freq(skill.frequency_score),
+                    skill.frequency_score,
+                )
             )
             total_meaningful = matched_meaningful + missing_meaningful
             skill_match_pct = (
