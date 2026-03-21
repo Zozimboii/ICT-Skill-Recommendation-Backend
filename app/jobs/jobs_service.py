@@ -33,7 +33,7 @@ class JobService:
         sub_category:     Optional[str]  = None,
         job_type:         Optional[str]  = None,
         experience_level: Optional[str]  = None,
-        # ── ข้อ 4: date range ────────────────────────────────────
+        search_by:        Optional[str]  = None,   # "title" | "skill" | None (all)
         min_date:         Optional[date] = None,
         max_date:         Optional[date] = None,
         page:             int = 1,
@@ -44,21 +44,38 @@ class JobService:
             joinedload(Job.skills).joinedload(JobSkill.skill)
         )
 
-        # keyword → title + company + skill name
+        # keyword filter — scope ตาม search_by
         if keyword and keyword.strip():
             kw = f"%{keyword.strip()}%"
-            q = (
-                q.outerjoin(JobSkill, Job.id == JobSkill.job_id)
-                 .outerjoin(Skill, JobSkill.skill_id == Skill.id)
-                 .filter(
+            if search_by == "title":
+                # ค้นหาเฉพาะชื่องาน
+                q = q.filter(
                     or_(
                         Job.title.ilike(kw),
                         Job.company_name.ilike(kw),
-                        Job.description.ilike(kw),
-                        Skill.name.ilike(kw),
                     )
-                 )
-            )
+                )
+            elif search_by == "skill":
+                # ค้นหาเฉพาะ skill name → join skill table
+                q = (
+                    q.join(JobSkill, Job.id == JobSkill.job_id)
+                     .join(Skill, JobSkill.skill_id == Skill.id)
+                     .filter(Skill.name.ilike(kw))
+                )
+            else:
+                # ค้นหาทุกที่ (default)
+                q = (
+                    q.outerjoin(JobSkill, Job.id == JobSkill.job_id)
+                     .outerjoin(Skill, JobSkill.skill_id == Skill.id)
+                     .filter(
+                        or_(
+                            Job.title.ilike(kw),
+                            Job.company_name.ilike(kw),
+                            Job.description.ilike(kw),
+                            Skill.name.ilike(kw),
+                        )
+                     )
+                )
 
         # sub_category dropdown
         if sub_category and sub_category != "all":

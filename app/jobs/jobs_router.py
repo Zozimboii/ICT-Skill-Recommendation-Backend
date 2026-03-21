@@ -47,7 +47,7 @@ def search_jobs(
     sub_category:     Optional[str]  = Query(None),
     job_type:         Optional[str]  = Query(None),
     experience_level: Optional[str]  = Query(None),
-    # ── ข้อ 4: date filters ───────────────────────────────────────────────────
+    search_by:        Optional[str]  = Query(None, description="title | skill | None(all)"),
     min_date:         Optional[date] = Query(None, description="กรองงานตั้งแต่วันที่ (YYYY-MM-DD)"),
     max_date:         Optional[date] = Query(None, description="กรองงานถึงวันที่ (YYYY-MM-DD)"),
     page:             int            = Query(1, ge=1),
@@ -60,6 +60,7 @@ def search_jobs(
         sub_category=sub_category,
         job_type=job_type,
         experience_level=experience_level,
+        search_by=search_by,
         min_date=min_date,
         max_date=max_date,
         page=page,
