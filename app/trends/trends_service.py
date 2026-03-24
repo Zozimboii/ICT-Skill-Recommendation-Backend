@@ -115,7 +115,7 @@ class TrendService:
 
 
 
-    def get_jobs_by_skill(self, db:Session, skill_id: int, limit: int = 20):
+    def get_jobs_by_skill(self, db:Session, skill_id: int, limit: int =20):
         jobs = (
             db.query(Job)
             .options(joinedload(Job.skills).joinedload(JobSkill.skill))

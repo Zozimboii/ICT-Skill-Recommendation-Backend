@@ -64,6 +64,16 @@ def update_user(
         raise HTTPException(status_code=404, detail="User not found")
     return user
 
+@router.delete("/users/{user_id}/delete")
+def delete_user(
+    user_id: int,
+    db: Session = Depends(get_db),
+    _: User = Depends(require_admin),
+):
+    ok = admin_service.delete_user(db, user_id)
+    if not ok:
+        raise HTTPException(status_code=404, detail="User not found")
+    return {"message": "deleted"}
 
 # ── Jobs ───────────────────────────────────────────────────────────
 @router.get("/jobs", response_model=dict)

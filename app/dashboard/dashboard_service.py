@@ -174,7 +174,7 @@ class DashboardService:
                 ),
             )
 
-            top10 = [
+            all_skill = [
                 SkillGapItem(
                     skill_name=skill.name,
                     skill_type=skill.skill_type,
@@ -182,7 +182,7 @@ class DashboardService:
                     importance=_importance_tier_by_freq(skill.frequency_score),
                     frequency_score=skill.frequency_score,
                 )
-                for skill, imp in missing_sorted[:10]
+                for skill, imp in missing_sorted
             ]
 
             all_missing_dicts = [
@@ -219,7 +219,7 @@ class DashboardService:
                     match_score=float(rec.match_score),
                     skill_match_percent=skill_match_pct,
                     matched_skills=matched_items,
-                    missing_skills=top10,
+                    missing_skills=all_skill,
                     missing_by_group=missing_by_group,
                     career_path=career_path,
                     total_missing=len(missing_sorted),

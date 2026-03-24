@@ -45,6 +45,14 @@ class AdminService:
         db.refresh(user)
         return AdminUserItem.model_validate(user)
 
+    def delete_user(self, db: Session, user_id: int) -> bool:
+        user = db.query(User).filter(User.id == user_id).first()
+        if not user:
+            return False
+        
+        db.delete(user)
+        db.commit()
+        return True
 
     def list_jobs(
         self,
