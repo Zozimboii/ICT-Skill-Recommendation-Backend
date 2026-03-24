@@ -20,7 +20,7 @@ def get_job_trend(db: Session = Depends(get_db)):
 
 @router.get("/skills")
 def get_skill_trend(
-    limit: int = Query(20, ge=1, le=100),
+    limit: int = Query(10, ge=1, le=1000),
      skill_type: Optional[str] = Query(
         None,
         description="Filter by skill type (hard_skill / soft_skill)"
@@ -49,7 +49,7 @@ def get_cross_data(
 @router.get("/skills/by-category")
 def get_skills_by_category(
     sub_category: str = Query(..., description="Job sub-category name"),
-    limit: int = Query(10, ge=1, le=50),
+    limit: int = Query(10, ge=1, le=1000),
     skill_type: str | None = None,
     db: Session = Depends(get_db),
 ):
@@ -60,14 +60,14 @@ def get_skills_by_category(
         skill_type
     )
 @router.get("/jobs-by-skill")
-def get_jobs_by_skill(skill_id: int, limit: int = 20, db: Session = Depends(get_db)):
+def get_jobs_by_skill(skill_id: int, limit: int = 999, db: Session = Depends(get_db)):
     return trend_service.get_jobs_by_skill(db,skill_id, limit)
 
 
 @router.get("/sankey")
 def get_sankey(
-    top_categories: int = 10,
-    top_skills: int = 6,
+    top_categories: int = 999,
+    top_skills: int = 999,
     db: Session = Depends(get_db),
 ):
     return trend_service.get_sankey_data(
