@@ -18,6 +18,9 @@ def create_app() -> FastAPI:
 
 app = create_app()
 
+@app.get("/")
+def root():
+    return {"message": "API is running"}
 
 @app.get(
     "/health",
