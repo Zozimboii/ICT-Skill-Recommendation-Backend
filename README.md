@@ -1,4 +1,4 @@
-# ICT Skill Advisor — Backend
+# ICT Job Skill Recommendation — Backend
 
 FastAPI backend สำหรับระบบวิเคราะห์ทักษะและแนะนำงาน ICT ไทย
 
